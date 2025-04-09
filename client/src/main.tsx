@@ -4,11 +4,14 @@ import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./components/utils/AuthProvider";
+import FirebaseInit from "./components/utils/FirebaseInit";
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <App />
+      <FirebaseInit>
+        <App />
+      </FirebaseInit>
     </AuthProvider>
   </QueryClientProvider>
 );

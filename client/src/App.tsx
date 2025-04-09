@@ -44,14 +44,14 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />
-          <Route path="/dashboard/parent">
+          <Route path="/parent">
             {() => (
               <ProtectedRoute role="parent">
                 <ParentDashboardPage />
               </ProtectedRoute>
             )}
           </Route>
-          <Route path="/dashboard/admin">
+          <Route path="/admin">
             {() => (
               <ProtectedRoute role="admin">
                 <AdminDashboardPage />

@@ -8,7 +8,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
@@ -31,14 +32,21 @@ export const useAuth = () => {
   return context;
 };
 
-// This is a basic implementation
-// In a production environment, you'd check against Firebase to determine roles
+// Check if a user is an admin by querying Firestore
 export const checkIsAdmin = async (userId: string): Promise<boolean> => {
-  // This would normally check Firebase for the user's role
-  // For now, we'll use a mock implementation
-  // The actual implementation would query Firestore
-  const adminIds = ["admin1", "admin2"]; // Example admin IDs
-  return adminIds.includes(userId);
+  try {
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      return userData?.role === "admin";
+    }
+    return false;
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false;
+  }
 };
 
 export const login = async (email: string, password: string): Promise<User | null> => {
