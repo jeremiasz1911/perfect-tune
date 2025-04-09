@@ -99,13 +99,13 @@ const CalendarView = () => {
   const getEventBadgeVariant = (type: string) => {
     switch (type) {
       case "class":
-        return "primary";
+        return "default";
       case "workshop":
         return "secondary";
       case "performance":
-        return "success";
+        return "outline";
       case "meeting":
-        return "warning";
+        return "destructive";
       default:
         return "default";
     }
@@ -145,7 +145,7 @@ const CalendarView = () => {
             
             <div className="mt-4 flex flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Badge variant="primary" className="w-3 h-3 p-0 rounded-full" />
+                <Badge variant="default" className="w-3 h-3 p-0 rounded-full" />
                 <span className="text-sm">Classes</span>
               </div>
               <div className="flex items-center gap-2">
@@ -153,11 +153,11 @@ const CalendarView = () => {
                 <span className="text-sm">Workshops</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success" className="w-3 h-3 p-0 rounded-full" />
+                <Badge variant="outline" className="w-3 h-3 p-0 rounded-full" />
                 <span className="text-sm">Performances</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="warning" className="w-3 h-3 p-0 rounded-full" />
+                <Badge variant="destructive" className="w-3 h-3 p-0 rounded-full" />
                 <span className="text-sm">Meetings</span>
               </div>
             </div>

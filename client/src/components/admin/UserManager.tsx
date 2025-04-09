@@ -210,8 +210,8 @@ const UserManager = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant={
-                            user.status === "active" ? "success" : 
-                            user.status === "pending" ? "warning" : "default"
+                            user.status === "active" ? "secondary" : 
+                            user.status === "pending" ? "outline" : "default"
                           }>
                             {user.status}
                           </Badge>
