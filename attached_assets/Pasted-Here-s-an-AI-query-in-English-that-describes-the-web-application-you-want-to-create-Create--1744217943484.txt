@@ -1,0 +1,49 @@
+Here's an AI query in English that describes the web application you want to create:
+
+---
+
+**Create a Web Application for a Music Workshop and Classes Business**
+
+I would like to create a web application with two parts: a front-end website and an admin/client dashboard. This application is for a company that runs music workshops and classes.
+
+### **Web Pages (Frontend):**
+1. **Home**
+2. **About Me**
+3. **Workshops**
+4. **Gallery**
+5. **Regular Classes**
+6. **Login/Registration** (This page should change depending on whether the user is logged in or not)
+7. **Contact**
+8. **Terms and Conditions**
+9. **Privacy Policy**
+
+### **User Registration:**
+- Parents should be able to register an account by providing their personal information: name, surname, address (street, city, postal code, apartment number, house number), and phone number.
+- During registration, parents can add one or more children by providing the child’s name, surname, and age.
+- Parents should be able to add or remove children during the registration process.
+- The registration form should also include a checkbox for accepting the Privacy Policy and Terms and Conditions.
+- After registration, parents should be able to log in to the system and access the client dashboard.
+
+### **User Dashboard (Parent):**
+Once the parent is logged in, they should have access to the following features:
+- **Dashboard:** A calendar of classes, the child’s attendance summary, payment history, and payment status.
+- **Classes:** Ability to register the child for available classes or workshops, transfer the child to a different group, etc.
+- **Payments:** Integration with Tpay for monthly payments for classes.
+- **Account Settings:** Ability to update personal details.
+
+### **Admin Dashboard:**
+- **Dashboard:** Overview of total payments, number of registered users, and total accounts.
+- **Classes:** Ability to create new classes (name, frequency, calendar).
+- **Calendar:** A large calendar view with all classes and events.
+- **Registered Users:** Information on all registered accounts with the option to edit them.
+- **Settings:** Admin panel settings for managing the site.
+
+### **Technology Stack:**
+- **Frontend:** React, TypeScript, TailwindCSS
+- **Backend:** Firebase (Firebase Authentication, Firebase Firestore Database)
+- **Payment Integration:** Tpay (I will provide the necessary Tpay credentials)
+- **Other Features:** Use modern technologies and add any useful components or functionalities that can enhance the user experience (e.g., notifications, real-time updates, etc.).
+
+---
+
+This prompt outlines all the core features and technology stack needed for your application. It gives the AI clear instructions for creating both the frontend and backend components, integrating with Firebase and Tpay, and ensuring that all user roles (parents and admins) have the required functionality.
