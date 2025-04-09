@@ -3,10 +3,13 @@ import HeroSection from "@/components/home/HeroSection";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { FaGraduationCap, FaAward, FaUsers, FaMusic, FaCalendar, FaClock, FaArrowRight, FaCheckCircle } from "react-icons/fa";
+import { motion } from "framer-motion";
+import { staggerContainer, fadeIn, textVariant, zoomIn } from "@/lib/animations";
+import PageTransition from "@/components/ui/PageTransition";
 
 const HomePage = () => {
   return (
-    <>
+    <PageTransition>
       <Helmet>
         <title>MusicAcademy - Music Workshops and Classes</title>
         <meta name="description" content="Discover music education through workshops and classes at MusicAcademy." />
@@ -17,80 +20,132 @@ const HomePage = () => {
       
       {/* About Section */}
       <section id="about" className="py-16 bg-white">
-        <div className="container mx-auto px-4">
+        <motion.div 
+          className="container mx-auto px-4"
+          variants={staggerContainer(0.1, 0.2)}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.25 }}
+        >
           <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="w-full md:w-1/2 relative">
+            <motion.div 
+              className="w-full md:w-1/2 relative"
+              variants={fadeIn("right", 0.5)}
+            >
               <img 
                 src="https://images.unsplash.com/photo-1485579149621-3123dd979885?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
                 alt="Music instructor" 
                 className="rounded-lg shadow-lg max-w-full md:h-[500px] object-cover" 
               />
-              <div className="absolute -bottom-6 -right-6 bg-primary p-6 rounded-lg shadow-lg hidden md:block">
+              <motion.div 
+                className="absolute -bottom-6 -right-6 bg-primary p-6 rounded-lg shadow-lg hidden md:block"
+                variants={zoomIn(0.8, 0.6)}
+              >
                 <p className="text-white font-heading text-xl font-bold">15+ Years</p>
                 <p className="text-white opacity-90">Teaching Experience</p>
-              </div>
-            </div>
-            <div className="w-full md:w-1/2">
-              <h2 className="font-accent text-3xl md:text-4xl font-bold mb-6">Meet Your Instructor</h2>
-              <p className="text-neutral-700 mb-6 leading-relaxed">
+              </motion.div>
+            </motion.div>
+            <motion.div 
+              className="w-full md:w-1/2"
+              variants={fadeIn("left", 0.5, 0.3)}
+            >
+              <motion.h2 
+                className="font-accent text-3xl md:text-4xl font-bold mb-6"
+                variants={textVariant(0.3)}
+              >
+                Meet Your Instructor
+              </motion.h2>
+              <motion.p 
+                className="text-neutral-700 mb-6 leading-relaxed"
+                variants={fadeIn("up", 0.4, 0.4)}
+              >
                 Hello! I'm Sarah Miller, a classically trained musician with over 15 years of teaching experience. I founded MusicAcademy with a simple mission: to make quality music education accessible and enjoyable for everyone.
-              </p>
-              <p className="text-neutral-700 mb-6 leading-relaxed">
+              </motion.p>
+              <motion.p 
+                className="text-neutral-700 mb-6 leading-relaxed"
+                variants={fadeIn("up", 0.4, 0.5)}
+              >
                 With degrees from Juilliard and the Royal Academy of Music, I bring both technical expertise and a passion for nurturing musical talent in students of all ages and abilities.
-              </p>
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className="flex items-start">
+              </motion.p>
+              <motion.div 
+                className="grid grid-cols-2 gap-6 mb-8"
+                variants={staggerContainer(0.08, 0.6)}
+              >
+                <motion.div className="flex items-start" variants={fadeIn("up", 0.3)}>
                   <FaGraduationCap className="text-primary text-xl mt-1 mr-4" />
                   <div>
                     <h4 className="font-bold mb-1">Music Education</h4>
                     <p className="text-sm text-neutral-600">Specialized in contemporary and classical instruction</p>
                   </div>
-                </div>
-                <div className="flex items-start">
+                </motion.div>
+                <motion.div className="flex items-start" variants={fadeIn("up", 0.3, 0.1)}>
                   <FaAward className="text-primary text-xl mt-1 mr-4" />
                   <div>
                     <h4 className="font-bold mb-1">Award-Winning</h4>
                     <p className="text-sm text-neutral-600">Recognized for teaching excellence</p>
                   </div>
-                </div>
-                <div className="flex items-start">
+                </motion.div>
+                <motion.div className="flex items-start" variants={fadeIn("up", 0.3, 0.2)}>
                   <FaUsers className="text-primary text-xl mt-1 mr-4" />
                   <div>
                     <h4 className="font-bold mb-1">All Ages Welcome</h4>
                     <p className="text-sm text-neutral-600">Tailored instruction for children and adults</p>
                   </div>
-                </div>
-                <div className="flex items-start">
+                </motion.div>
+                <motion.div className="flex items-start" variants={fadeIn("up", 0.3, 0.3)}>
                   <FaMusic className="text-primary text-xl mt-1 mr-4" />
                   <div>
                     <h4 className="font-bold mb-1">Multiple Instruments</h4>
                     <p className="text-sm text-neutral-600">Piano, guitar, violin, and voice</p>
                   </div>
-                </div>
-              </div>
-              <Link href="/contact">
-                <Button className="bg-primary hover:bg-primary-dark text-white font-medium px-6 py-3">
-                  Contact Me
-                </Button>
-              </Link>
-            </div>
+                </motion.div>
+              </motion.div>
+              <motion.div variants={fadeIn("up", 0.5, 0.8)}>
+                <Link href="/contact">
+                  <Button className="bg-primary hover:bg-primary-dark text-white font-medium px-6 py-3">
+                    Contact Me
+                  </Button>
+                </Link>
+              </motion.div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
       
       {/* Workshops Preview Section */}
       <section className="py-16 bg-neutral-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="font-accent text-3xl md:text-4xl font-bold mb-4">Upcoming Music Workshops</h2>
-            <p className="text-neutral-600 max-w-2xl mx-auto">
+        <motion.div 
+          className="container mx-auto px-4"
+          variants={staggerContainer(0.1, 0.2)}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+          <motion.div className="text-center mb-12" variants={fadeIn("up", 0.5)}>
+            <motion.h2 
+              className="font-accent text-3xl md:text-4xl font-bold mb-4"
+              variants={textVariant(0.2)}
+            >
+              Upcoming Music Workshops
+            </motion.h2>
+            <motion.p 
+              className="text-neutral-600 max-w-2xl mx-auto"
+              variants={fadeIn("up", 0.5, 0.3)}
+            >
               Dive into our intensive, focused workshop sessions designed to build specific skills and expose you to new musical concepts.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={staggerContainer(0.1, 0.3)}
+          >
             {/* Workshop Card 1 */}
-            <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200">
+            <motion.div 
+              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200"
+              variants={fadeIn("up", 0.5, 0.1)}
+              whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            >
               <div className="h-48 bg-cover bg-center" style={{backgroundImage: `url('https://images.unsplash.com/photo-1510915361894-db8b60106cb1?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80')`}}></div>
               <div className="p-6">
                 <span className="inline-block px-3 py-1 bg-primary-light text-white text-xs font-semibold rounded-full mb-3">Guitar</span>
@@ -119,10 +174,14 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
             
             {/* Workshop Card 2 */}
-            <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200">
+            <motion.div 
+              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200"
+              variants={fadeIn("up", 0.5, 0.2)}
+              whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            >
               <div className="h-48 bg-cover bg-center" style={{backgroundImage: `url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80')`}}></div>
               <div className="p-6">
                 <span className="inline-block px-3 py-1 bg-primary-light text-white text-xs font-semibold rounded-full mb-3">Piano</span>
@@ -151,10 +210,14 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
             
             {/* Workshop Card 3 */}
-            <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200">
+            <motion.div 
+              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-200"
+              variants={fadeIn("up", 0.5, 0.3)}
+              whileHover={{ y: -10, transition: { duration: 0.3 } }}
+            >
               <div className="h-48 bg-cover bg-center" style={{backgroundImage: `url('https://images.unsplash.com/photo-1465847899084-d164df4dedc6?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80')`}}></div>
               <div className="p-6">
                 <span className="inline-block px-3 py-1 bg-primary-light text-white text-xs font-semibold rounded-full mb-3">Vocal</span>
@@ -183,39 +246,72 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           
-          <div className="mt-12 text-center">
+          <motion.div 
+            className="mt-12 text-center"
+            variants={fadeIn("up", 0.5, 0.8)}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+          >
             <Link href="/workshops">
               <Button variant="outline" className="inline-flex items-center border-2 border-primary text-primary hover:bg-primary hover:text-white font-medium px-6 py-3 rounded-md transition-all duration-200">
                 View All Workshops
                 <FaArrowRight className="ml-2" />
               </Button>
             </Link>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
       
       {/* Classes Preview */}
       <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="font-accent text-3xl md:text-4xl font-bold mb-4">Regular Music Classes</h2>
-            <p className="text-neutral-600 max-w-2xl mx-auto">
+        <motion.div 
+          className="container mx-auto px-4"
+          variants={staggerContainer(0.1, 0.2)}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+          <motion.div 
+            className="text-center mb-12"
+            variants={fadeIn("up", 0.5)}
+          >
+            <motion.h2 
+              className="font-accent text-3xl md:text-4xl font-bold mb-4"
+              variants={textVariant(0.2)}
+            >
+              Regular Music Classes
+            </motion.h2>
+            <motion.p 
+              className="text-neutral-600 max-w-2xl mx-auto"
+              variants={fadeIn("up", 0.4, 0.3)}
+            >
               Join our ongoing classes to develop your musical skills through consistent practice and expert guidance.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={staggerContainer(0.1, 0.4)}
+          >
             {/* Class Card 1 */}
-            <div className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200">
+            <motion.div 
+              className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200"
+              variants={fadeIn("up", 0.4, 0.1)}
+              whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h4 className="font-bold text-lg">Piano Lessons</h4>
                   <p className="text-neutral-600 text-sm">All skill levels welcome</p>
                 </div>
-                <span className="bg-secondary-light text-white text-xs font-bold px-2 py-1 rounded-full">Popular</span>
+                <motion.span 
+                  className="bg-secondary-light text-white text-xs font-bold px-2 py-1 rounded-full"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  Popular
+                </motion.span>
               </div>
               <p className="text-neutral-600 text-sm mb-4">
                 Weekly private lessons tailored to your skill level and musical interests. From classical to contemporary.
@@ -236,16 +332,28 @@ const HomePage = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
+            </motion.div>
             
             {/* Class Card 2 */}
-            <div className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200">
+            <motion.div 
+              className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200"
+              variants={fadeIn("up", 0.4, 0.2)}
+              whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h4 className="font-bold text-lg">Guitar Lessons</h4>
                   <p className="text-neutral-600 text-sm">Acoustic, Electric, Bass</p>
                 </div>
-                <span className="bg-accent text-white text-xs font-bold px-2 py-1 rounded-full">New</span>
+                <motion.span 
+                  className="bg-accent text-white text-xs font-bold px-2 py-1 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    transition: { repeat: Infinity, duration: 2 }
+                  }}
+                >
+                  New
+                </motion.span>
               </div>
               <p className="text-neutral-600 text-sm mb-4">
                 Learn guitar techniques, songs, and theory in personalized one-on-one lessons with expert instructors.
@@ -266,10 +374,14 @@ const HomePage = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
+            </motion.div>
             
             {/* Class Card 3 */}
-            <div className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200">
+            <motion.div 
+              className="border border-neutral-200 rounded-lg p-5 hover:shadow-md transition-all duration-200"
+              variants={fadeIn("up", 0.4, 0.3)}
+              whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h4 className="font-bold text-lg">Vocal Training</h4>
@@ -295,18 +407,22 @@ const HomePage = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           
-          <div className="mt-12 text-center">
+          <motion.div 
+            className="mt-12 text-center"
+            variants={fadeIn("up", 0.5, 0.8)}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+          >
             <Link href="/classes">
               <Button variant="outline" className="inline-flex items-center border-2 border-primary text-primary hover:bg-primary hover:text-white font-medium px-6 py-3 rounded-md transition-all duration-200">
                 Explore All Classes
                 <FaArrowRight className="ml-2" />
               </Button>
             </Link>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
       
       {/* Registration CTA */}
@@ -353,7 +469,7 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-    </>
+    </PageTransition>
   );
 };
 
