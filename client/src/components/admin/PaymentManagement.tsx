@@ -1,11 +1,50 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { fadeIn } from '@/lib/animations';
+import { toast } from '@/hooks/use-toast';
+import { FaEllipsisV, FaFileInvoice, FaSearch, FaFilter } from 'react-icons/fa';
 
 interface Payment {
   id: string;
@@ -20,90 +59,148 @@ interface Payment {
 }
 
 const PaymentManagement = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-
-  // Example payments data
-  const payments: Payment[] = [
+  const [payments, setPayments] = useState<Payment[]>([
     {
-      id: 'p1',
-      studentName: 'Emily Johnson',
+      id: 'PAY-001',
+      studentName: 'Emma Johnson',
       parentName: 'Sarah Johnson',
-      amount: 150,
-      date: '2025-03-15',
-      type: 'class',
-      status: 'paid',
-      method: 'credit_card',
-      description: 'Piano Lessons - March'
-    },
-    {
-      id: 'p2',
-      studentName: 'Max Wilson',
-      parentName: 'Robert Wilson',
-      amount: 85,
-      date: '2025-03-20',
-      type: 'workshop',
-      status: 'paid',
-      method: 'bank_transfer',
-      description: 'Jazz Improvisation Workshop'
-    },
-    {
-      id: 'p3',
-      studentName: 'Sophie Davis',
-      parentName: 'James Davis',
-      amount: 180,
-      date: '2025-04-01',
-      type: 'class',
-      status: 'pending',
-      method: 'credit_card',
-      description: 'Guitar Lessons - April'
-    },
-    {
-      id: 'p4',
-      studentName: 'Oliver Brown',
-      parentName: 'Michael Brown',
-      amount: 35,
-      date: '2025-03-10',
-      type: 'materials',
-      status: 'overdue',
-      method: 'cash',
-      description: 'Sheet Music and Books'
-    },
-    {
-      id: 'p5',
-      studentName: 'Emma Miller',
-      parentName: 'David Miller',
-      amount: 155,
+      amount: 120.00,
       date: '2025-04-05',
       type: 'class',
-      status: 'pending',
+      status: 'paid',
+      method: 'credit_card',
+      description: 'Piano Lessons - April 2025'
+    },
+    {
+      id: 'PAY-002',
+      studentName: 'Noah Smith',
+      parentName: 'Michael Smith',
+      amount: 150.00,
+      date: '2025-04-07',
+      type: 'class',
+      status: 'paid',
       method: 'bank_transfer',
-      description: 'Vocal Training - April'
+      description: 'Guitar Lessons - April 2025'
+    },
+    {
+      id: 'PAY-003',
+      studentName: 'Olivia Brown',
+      parentName: 'Jessica Brown',
+      amount: 80.00,
+      date: '2025-04-08',
+      type: 'workshop',
+      status: 'paid',
+      method: 'credit_card',
+      description: 'Summer Music Workshop'
+    },
+    {
+      id: 'PAY-004',
+      studentName: 'Liam Davis',
+      parentName: 'Jennifer Davis',
+      amount: 45.00,
+      date: '2025-04-10',
+      type: 'materials',
+      status: 'pending',
+      method: 'other',
+      description: 'Music Books and Sheet Music'
+    },
+    {
+      id: 'PAY-005',
+      studentName: 'Ava Wilson',
+      parentName: 'Robert Wilson',
+      amount: 120.00,
+      date: '2025-03-15',
+      type: 'class',
+      status: 'overdue',
+      method: 'bank_transfer',
+      description: 'Violin Lessons - March 2025'
+    },
+    {
+      id: 'PAY-006',
+      studentName: 'Mason Thompson',
+      parentName: 'David Thompson',
+      amount: 135.00,
+      date: '2025-04-12',
+      type: 'class',
+      status: 'pending',
+      method: 'cash',
+      description: 'Drum Lessons - April 2025'
+    },
+    {
+      id: 'PAY-007',
+      studentName: 'Sofia Martinez',
+      parentName: 'Maria Martinez',
+      amount: 90.00,
+      date: '2025-04-09',
+      type: 'workshop',
+      status: 'paid',
+      method: 'credit_card',
+      description: 'Songwriting Workshop'
     }
-  ];
+  ]);
 
-  // Filter payments based on search query and status filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [showSendReminder, setShowSendReminder] = useState(false);
+  
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = 
-      payment.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      payment.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          payment.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          payment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          payment.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+    const matchesType = typeFilter === 'all' || payment.type === typeFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Calculate totals
-  const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-  const totalPending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
-  const totalOverdue = payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
+  const handleViewDetails = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowPaymentDetails(true);
+  };
 
-  const getStatusColor = (status: string) => {
+  const handleSendReminder = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowSendReminder(true);
+  };
+
+  const handleMarkAsPaid = (paymentId: string) => {
+    setPayments(payments.map(payment => 
+      payment.id === paymentId 
+        ? { ...payment, status: 'paid' } 
+        : payment
+    ));
+    
+    toast({
+      title: "Payment Updated",
+      description: "Payment has been marked as paid successfully.",
+    });
+  };
+
+  const sendPaymentReminder = () => {
+    if (selectedPayment) {
+      toast({
+        title: "Reminder Sent",
+        description: `Payment reminder sent to parent of ${selectedPayment.studentName}.`,
+      });
+      setShowSendReminder(false);
+    }
+  };
+
+  const getStatusBadge = (status: Payment['status']) => {
     switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'paid':
+        return <Badge className="bg-green-500">Paid</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive">Overdue</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -116,115 +213,307 @@ const PaymentManagement = () => {
     >
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Payment Management</h1>
-        <p className="text-gray-600">View and manage payments from students and parents</p>
+        <p className="text-gray-600">View and manage all payments in the system</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Total Paid</CardTitle>
-            <CardDescription>Completed payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-600">${totalPaid.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Pending</CardTitle>
-            <CardDescription>Upcoming payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-yellow-600">${totalPending.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Overdue</CardTitle>
-            <CardDescription>Late payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-600">${totalOverdue.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <Input 
-              placeholder="Search by student name or description..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
+      <Card className="mb-8">
+        <CardHeader className="pb-2">
+          <CardTitle>Payment Overview</CardTitle>
+          <CardDescription>Quick summary of payment status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 className="text-green-700 font-semibold">Paid</h4>
+              <div className="flex items-end justify-between mt-2">
+                <span className="text-3xl font-bold text-green-700">
+                  ${payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </span>
+                <span className="text-green-600">
+                  {payments.filter(p => p.status === 'paid').length} payments
+                </span>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 className="text-yellow-700 font-semibold">Pending</h4>
+              <div className="flex items-end justify-between mt-2">
+                <span className="text-3xl font-bold text-yellow-700">
+                  ${payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </span>
+                <span className="text-yellow-600">
+                  {payments.filter(p => p.status === 'pending').length} payments
+                </span>
+              </div>
+            </div>
+            
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 className="text-red-700 font-semibold">Overdue</h4>
+              <div className="flex items-end justify-between mt-2">
+                <span className="text-3xl font-bold text-red-700">
+                  ${payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </span>
+                <span className="text-red-600">
+                  {payments.filter(p => p.status === 'overdue').length} payments
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="w-full md:w-48">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button className="whitespace-nowrap">
-            + New Payment
-          </Button>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left px-4 py-3 border-b">Student</th>
-                <th className="text-left px-4 py-3 border-b">Parent</th>
-                <th className="text-left px-4 py-3 border-b">Description</th>
-                <th className="text-left px-4 py-3 border-b">Date</th>
-                <th className="text-left px-4 py-3 border-b">Amount</th>
-                <th className="text-left px-4 py-3 border-b">Status</th>
-                <th className="text-left px-4 py-3 border-b">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPayments.length > 0 ? (
-                filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 border-b">{payment.studentName}</td>
-                    <td className="px-4 py-4 border-b">{payment.parentName}</td>
-                    <td className="px-4 py-4 border-b">{payment.description}</td>
-                    <td className="px-4 py-4 border-b">{payment.date}</td>
-                    <td className="px-4 py-4 border-b font-medium">${payment.amount}</td>
-                    <td className="px-4 py-4 border-b">
-                      <Badge className={getStatusColor(payment.status)}>
-                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-4 border-b">
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">View</Button>
-                        <Button variant="outline" size="sm">Edit</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
-                    No payments found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription>View and manage all payments</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Input 
+                  placeholder="Search payments..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full sm:w-64"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex items-center">
+              <FaFilter className="mr-2 text-gray-500" />
+              <span className="text-sm mr-2">Status:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-8 w-24 sm:w-32">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center ml-0 sm:ml-4">
+              <span className="text-sm mr-2">Type:</span>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-8 w-24 sm:w-32">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="class">Class</SelectItem>
+                  <SelectItem value="workshop">Workshop</SelectItem>
+                  <SelectItem value="materials">Materials</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Student</TableHead>
+                  <TableHead className="hidden md:table-cell">Parent</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Type</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.length > 0 ? (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{payment.id}</TableCell>
+                      <TableCell>{payment.studentName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{payment.parentName}</TableCell>
+                      <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{new Date(payment.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                      <TableCell className="hidden md:table-cell capitalize">{payment.type}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <FaEllipsisV className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewDetails(payment)}>
+                              <FaFileInvoice className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            {payment.status !== 'paid' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleMarkAsPaid(payment.id)}>
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSendReminder(payment)}>
+                                  Send Reminder
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                      No payments found matching your filters.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Details Dialog */}
+      <Dialog open={showPaymentDetails} onOpenChange={setShowPaymentDetails}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payment Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this payment.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Payment ID</Label>
+                  <p className="font-medium">{selectedPayment.id}</p>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-gray-500 text-sm">Status</Label>
+                  <p>{getStatusBadge(selectedPayment.status)}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-gray-500 text-sm">Description</Label>
+                <p className="font-medium">{selectedPayment.description}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Student</Label>
+                  <p className="font-medium">{selectedPayment.studentName}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Parent</Label>
+                  <p className="font-medium">{selectedPayment.parentName}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Amount</Label>
+                  <p className="font-bold text-lg">${selectedPayment.amount.toFixed(2)}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Date</Label>
+                  <p className="font-medium">{new Date(selectedPayment.date).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Payment Type</Label>
+                  <p className="font-medium capitalize">{selectedPayment.type}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-500 text-sm">Payment Method</Label>
+                  <p className="font-medium capitalize">{selectedPayment.method.replace('_', ' ')}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="sm:justify-between">
+            {selectedPayment && selectedPayment.status !== 'paid' && (
+              <Button 
+                variant="secondary" 
+                onClick={() => {
+                  handleMarkAsPaid(selectedPayment.id);
+                  setShowPaymentDetails(false);
+                }}
+              >
+                Mark as Paid
+              </Button>
+            )}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowPaymentDetails(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Reminder Dialog */}
+      <Dialog open={showSendReminder} onOpenChange={setShowSendReminder}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Payment Reminder</DialogTitle>
+            <DialogDescription>
+              Send a reminder to the parent about an upcoming or overdue payment.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-1">
+                <Label htmlFor="recipient">Recipient</Label>
+                <Input id="recipient" value={`${selectedPayment.parentName} (Parent of ${selectedPayment.studentName})`} readOnly />
+              </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="subject">Subject</Label>
+                <Input id="subject" value={`Payment Reminder: ${selectedPayment.description}`} />
+              </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="message">Message</Label>
+                <textarea
+                  id="message"
+                  rows={4}
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                  defaultValue={`Dear ${selectedPayment.parentName},\n\nThis is a friendly reminder about the payment (${selectedPayment.id}) for ${selectedPayment.description} in the amount of $${selectedPayment.amount.toFixed(2)}.\n\nPlease process this payment at your earliest convenience.\n\nThank you,\nMusicAcademy Team`}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowSendReminder(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={sendPaymentReminder}>
+              Send Reminder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

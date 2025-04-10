@@ -8,6 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import ClassManager from "@/components/admin/ClassManager";
 import UserManager from "@/components/admin/UserManager";
 import CalendarView from "@/components/admin/CalendarView";
+import PaymentManagement from "@/components/admin/PaymentManagement";
+import ReportsAnalytics from "@/components/admin/ReportsAnalytics";
+import SystemSettings from "@/components/admin/SystemSettings";
 import { 
   FaTachometerAlt, 
   FaMusic, 
@@ -591,51 +594,15 @@ const AdminDashboardPage = () => {
             </TabsContent>
             
             <TabsContent value="payments" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment Management</CardTitle>
-                  <CardDescription>
-                    View and manage all payments in the system.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-neutral-600">
-                    This section will be implemented in the next phase.
-                  </p>
-                </CardContent>
-              </Card>
+              <PaymentManagement />
             </TabsContent>
             
             <TabsContent value="reports" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Reports and Analytics</CardTitle>
-                  <CardDescription>
-                    View detailed reports and statistics about your business.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-neutral-600">
-                    This section will be implemented in the next phase.
-                  </p>
-                </CardContent>
-              </Card>
+              <ReportsAnalytics />
             </TabsContent>
             
             <TabsContent value="settings" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Settings</CardTitle>
-                  <CardDescription>
-                    Configure system-wide settings and preferences.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-neutral-600">
-                    This section will be implemented in the next phase.
-                  </p>
-                </CardContent>
-              </Card>
+              <SystemSettings />
             </TabsContent>
           </div>
         </div>
