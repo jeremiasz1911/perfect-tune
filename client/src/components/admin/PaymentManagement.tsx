@@ -295,7 +295,7 @@ const PaymentManagement = () => {
               <h4 className="text-red-700 font-semibold">Overdue</h4>
               <div className="flex items-end justify-between mt-2">
                 <span className="text-3xl font-bold text-red-700">
-                  ${payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                  {payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0).toFixed(2)} PLN
                 </span>
                 <span className="text-red-600">
                   {payments.filter(p => p.status === 'overdue').length} payments
@@ -381,7 +381,7 @@ const PaymentManagement = () => {
                       <TableCell>{payment.id}</TableCell>
                       <TableCell>{payment.studentName}</TableCell>
                       <TableCell className="hidden md:table-cell">{payment.parentName}</TableCell>
-                      <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                      <TableCell>{payment.amount.toFixed(2)} PLN</TableCell>
                       <TableCell className="hidden md:table-cell">{new Date(payment.date).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell className="hidden md:table-cell capitalize">{payment.type}</TableCell>
@@ -470,7 +470,7 @@ const PaymentManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-gray-500 text-sm">Amount</Label>
-                  <p className="font-bold text-lg">${selectedPayment.amount.toFixed(2)}</p>
+                  <p className="font-bold text-lg">{selectedPayment.amount.toFixed(2)} PLN</p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-gray-500 text-sm">Date</Label>
@@ -542,7 +542,7 @@ const PaymentManagement = () => {
                   id="message"
                   rows={4}
                   className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                  defaultValue={`Dear ${selectedPayment.parentName},\n\nThis is a friendly reminder about the payment (${selectedPayment.id}) for ${selectedPayment.description} in the amount of $${selectedPayment.amount.toFixed(2)}.\n\nPlease process this payment at your earliest convenience.\n\nThank you,\nMusicAcademy Team`}
+                  defaultValue={`Dear ${selectedPayment.parentName},\n\nThis is a friendly reminder about the payment (${selectedPayment.id}) for ${selectedPayment.description} in the amount of ${selectedPayment.amount.toFixed(2)} PLN.\n\nPlease process this payment at your earliest convenience.\n\nThank you,\nMusicAcademy Team`}
                 />
               </div>
             </div>
