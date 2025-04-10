@@ -38,6 +38,9 @@ interface PaymentData {
   date: string;
   status: string;
   studentName: string;
+  currency?: string;
+  itemId?: string;
+  itemType?: 'class' | 'workshop' | 'materials';
 }
 
 interface PaymentHistoryProps {
@@ -155,7 +158,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
 
   const getStatusBadge = (status: string) => {
     if (status.toLowerCase().includes("paid")) {
-      return <Badge variant="success" className="bg-green-100 text-green-800">Paid</Badge>;
+      return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
     } else if (status.toLowerCase().includes("due")) {
       return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">{status}</Badge>;
     } else {
@@ -219,7 +222,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
                       <TableCell className="font-medium">{payment.description}</TableCell>
                       <TableCell>{payment.studentName}</TableCell>
                       <TableCell>{payment.date}</TableCell>
-                      <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                      <TableCell>{payment.amount.toFixed(2)} {payment.currency || 'PLN'}</TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -273,7 +276,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-sm text-neutral-500 mb-1">Total Paid</p>
-                  <p className="text-2xl font-bold text-green-600">${getTotalPaid().toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-600">{getTotalPaid().toFixed(2)} PLN</p>
                 </div>
               </CardContent>
             </Card>
@@ -281,7 +284,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-sm text-neutral-500 mb-1">Outstanding Balance</p>
-                  <p className="text-2xl font-bold text-yellow-600">${getTotalDue().toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-yellow-600">{getTotalDue().toFixed(2)} PLN</p>
                 </div>
               </CardContent>
             </Card>
@@ -348,7 +351,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Amount:</span>
-                <span className="font-bold">${selectedPayment?.amount.toFixed(2)}</span>
+                <span className="font-bold">{selectedPayment?.amount.toFixed(2)} {selectedPayment?.currency || 'PLN'}</span>
               </div>
             </div>
             

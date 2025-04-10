@@ -163,15 +163,16 @@ export function TPayIntegration({
           </Button>
         ) : (
           <>
-            <Button 
-              as="a" 
+            <a 
               href={paymentUrl} 
               target="_blank" 
               rel="noopener noreferrer"
               className="w-full"
             >
-              Proceed to TPay
-            </Button>
+              <Button className="w-full">
+                Proceed to TPay
+              </Button>
+            </a>
             <Button
               variant="outline"
               onClick={handleVerifyPayment}
