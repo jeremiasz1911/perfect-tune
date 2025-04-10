@@ -18,7 +18,6 @@ const enrollmentsCollection = collection(db, "enrollments");
 const paymentsCollection = collection(db, "payments");
 const attendanceCollection = collection(db, "attendance");
 const workshopsCollection = collection(db, "workshops");
-const notificationsCollection = collection(db, "notifications");
 
 // Initial classes data
 const initialClasses = [
@@ -39,7 +38,6 @@ const initialClasses = [
     ageRange: "5-8",
     status: "active",
     startDate: "2025-01-15",
-    currency: "PLN",
     createdAt: Timestamp.now()
   },
   {
@@ -59,7 +57,6 @@ const initialClasses = [
     ageRange: "9-12",
     status: "active",
     startDate: "2025-01-16",
-    currency: "PLN",
     createdAt: Timestamp.now()
   },
   {
@@ -79,7 +76,6 @@ const initialClasses = [
     ageRange: "10-15",
     status: "active",
     startDate: "2025-01-17",
-    currency: "PLN",
     createdAt: Timestamp.now()
   },
   {
@@ -99,7 +95,6 @@ const initialClasses = [
     ageRange: "8-14",
     status: "active",
     startDate: "2025-01-20",
-    currency: "PLN",
     createdAt: Timestamp.now()
   },
   {
@@ -119,7 +114,6 @@ const initialClasses = [
     ageRange: "10-16",
     status: "active",
     startDate: "2025-01-22",
-    currency: "PLN",
     createdAt: Timestamp.now()
   }
 ];
@@ -134,7 +128,6 @@ const initialWorkshops = [
     time: "9:00 AM - 3:00 PM",
     location: "Main Hall",
     price: 350,
-    currency: "PLN",
     capacity: 25,
     spotsLeft: 18,
     imageUrl: "https://images.unsplash.com/photo-1525342380973-596771d8a18f?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -148,7 +141,6 @@ const initialWorkshops = [
     time: "2:00 PM - 5:00 PM",
     location: "Studio B",
     price: 95,
-    currency: "PLN",
     capacity: 12,
     spotsLeft: 7,
     imageUrl: "https://images.unsplash.com/photo-1453738773917-9c3eff1db985?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -162,7 +154,6 @@ const initialWorkshops = [
     time: "1:00 PM - 4:00 PM",
     location: "Classroom 2",
     price: 85,
-    currency: "PLN",
     capacity: 15,
     spotsLeft: 11,
     imageUrl: "https://images.unsplash.com/photo-1520446266423-6daca23fe8c7?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -176,79 +167,9 @@ const initialWorkshops = [
     time: "3:00 PM - 6:00 PM",
     location: "Digital Lab",
     price: 110,
-    currency: "PLN",
     capacity: 10,
     spotsLeft: 5,
     imageUrl: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
-    createdAt: Timestamp.now()
-  }
-];
-
-// Initial payments data
-const initialPayments = [
-  {
-    userId: "user1",
-    studentName: "Emma Johnson",
-    parentName: "Sarah Johnson",
-    amount: 12000,
-    date: "2025-04-05",
-    type: "class",
-    status: "paid",
-    method: "Tpay",
-    currency: "PLN",
-    description: "Piano Lessons - April 2025",
-    createdAt: Timestamp.now()
-  },
-  {
-    userId: "user2",
-    studentName: "Noah Smith",
-    parentName: "Michael Smith",
-    amount: 15000,
-    date: "2025-04-07",
-    type: "class",
-    status: "paid",
-    method: "Tpay",
-    currency: "PLN",
-    description: "Guitar Lessons - April 2025",
-    createdAt: Timestamp.now()
-  },
-  {
-    userId: "user3",
-    studentName: "Olivia Brown",
-    parentName: "Jessica Brown",
-    amount: 8000,
-    date: "2025-04-08",
-    type: "workshop",
-    status: "paid",
-    method: "Tpay",
-    currency: "PLN",
-    description: "Summer Music Workshop",
-    createdAt: Timestamp.now()
-  },
-  {
-    userId: "user4",
-    studentName: "Liam Davis",
-    parentName: "Jennifer Davis",
-    amount: 4500,
-    date: "2025-04-10",
-    type: "materials",
-    status: "pending",
-    method: "Tpay",
-    currency: "PLN",
-    description: "Music Books and Sheet Music",
-    createdAt: Timestamp.now()
-  },
-  {
-    userId: "user5",
-    studentName: "Ava Wilson",
-    parentName: "Robert Wilson",
-    amount: 12000,
-    date: "2025-03-15",
-    type: "class",
-    status: "overdue",
-    method: "Tpay",
-    currency: "PLN",
-    description: "Violin Lessons - March 2025",
     createdAt: Timestamp.now()
   }
 ];
@@ -307,21 +228,6 @@ export const initializeFirestore = async (): Promise<void> => {
     } else {
       console.log("Workshops already exist in Firestore");
     }
-
-    // Check if payments already exist to avoid duplication
-    const paymentsQuery = query(paymentsCollection);
-    const paymentsSnapshot = await getDocs(paymentsQuery);
-    
-    if (paymentsSnapshot.empty) {
-      console.log("Initializing payments in Firestore...");
-      for (const paymentData of initialPayments) {
-        const docRef = doc(paymentsCollection);
-        await setDoc(docRef, paymentData);
-      }
-      console.log("Payments initialized successfully");
-    } else {
-      console.log("Payments already exist in Firestore");
-    }
   } catch (error) {
     console.error("Error initializing Firestore:", error);
     throw error;
@@ -360,13 +266,6 @@ export const getFirestoreCollections = async (): Promise<{ [key: string]: any[] 
     workshopsSnapshot.forEach((doc) => {
       const data = doc.data();
       collections.workshops.push({ id: doc.id, ...data });
-    });
-    
-    // Get payments
-    const paymentsSnapshot = await getDocs(paymentsCollection);
-    paymentsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      collections.payments.push({ id: doc.id, ...data });
     });
     
     // Get children (optional for development)
