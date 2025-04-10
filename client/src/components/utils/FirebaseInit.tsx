@@ -23,68 +23,84 @@ export const FirebaseInit: React.FC<FirebaseInitProps> = ({ children }) => {
 
       setLoading(true);
       try {
-        // Check if user exists in the database
-        const userRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userRef);
-
-        let isAdmin = false;
-        if (!userDoc.exists()) {
-          // This is a new user, create their document
-          const userData = {
-            email: user.email,
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || '',
-            createdAt: Timestamp.now(),
-            lastLogin: Timestamp.now(),
-            role: 'parent', // Default role
-          };
-
-          await setDoc(userRef, userData);
-
-          // Check if this is the first user in the system
-          const usersCollection = collection(db, 'users');
-          const usersSnapshot = await getDocs(usersCollection);
-          
-          if (usersSnapshot.size === 1) {
-            // This is the first user, make them an admin
-            await markUserAsAdmin(user.uid);
-            isAdmin = true;
-            toast({
-              title: 'Admin Access Granted',
-              description: 'You have been promoted to admin as the first user.',
-            });
-          }
-        } else {
-          // Existing user, update their last login
-          await setDoc(userRef, {
-            lastLogin: Timestamp.now(),
-          }, { merge: true });
-          
-          // Check if the user is an admin
-          const userData = userDoc.data();
-          isAdmin = userData?.role === 'admin';
-        }
-
-        // Initialize Firestore with sample data if needed
-        await initializeFirestore();
-
+        // Initialize basic app regardless of Firebase error to allow application to run
         setInitialized(true);
-        setLoading(false);
         
-        // Redirect user based on role
-        if (isAdmin) {
-          setLocation('/admin');
-        } else {
-          setLocation('/parent');
+        try {
+          // Check if user exists in the database
+          const userRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userRef);
+  
+          let isAdmin = false;
+          if (!userDoc.exists()) {
+            // This is a new user, create their document
+            const userData = {
+              email: user.email,
+              displayName: user.displayName || '',
+              photoURL: user.photoURL || '',
+              createdAt: Timestamp.now(),
+              lastLogin: Timestamp.now(),
+              role: 'parent', // Default role
+            };
+  
+            await setDoc(userRef, userData);
+  
+            // Check if this is the first user in the system
+            const usersCollection = collection(db, 'users');
+            const usersSnapshot = await getDocs(usersCollection);
+            
+            if (usersSnapshot.size === 1) {
+              // This is the first user, make them an admin
+              await markUserAsAdmin(user.uid);
+              isAdmin = true;
+              toast({
+                title: 'Admin Access Granted',
+                description: 'You have been promoted to admin as the first user.',
+              });
+            }
+          } else {
+            // Existing user, update their last login
+            await setDoc(userRef, {
+              lastLogin: Timestamp.now(),
+            }, { merge: true });
+            
+            // Check if the user is an admin
+            const userData = userDoc.data();
+            isAdmin = userData?.role === 'admin';
+          }
+  
+          // Initialize Firestore with sample data if needed
+          await initializeFirestore();
+          
+          // Redirect user based on role
+          if (isAdmin) {
+            setLocation('/admin');
+          } else {
+            setLocation('/parent');
+          }
+        } catch (firebaseError) {
+          console.error('Firebase operation error:', firebaseError);
+          toast({
+            title: 'Firebase Connection Issue',
+            description: 'We could not connect to the database, but you can still explore the application.',
+            variant: 'default',
+          });
+          
+          // Redirect to homepage if Firebase fails
+          setLocation('/');
         }
+
+        setLoading(false);
       } catch (error) {
         console.error('Error initializing Firebase:', error);
         toast({
           title: 'Error',
-          description: 'Failed to initialize the database.',
+          description: 'Failed to initialize the application, but you can still explore the interface.',
           variant: 'destructive',
         });
+        setInitialized(true); // Still mark as initialized to let the app run
         setLoading(false);
+        setLocation('/');
       }
     };
 
