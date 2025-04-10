@@ -96,8 +96,8 @@ const HeroSection = () => {
                       <p className="text-neutral-600 text-sm">{workshop.date} • {workshop.time}</p>
                       <div className="mt-2 flex justify-between items-center">
                         <span className="text-neutral-700">${workshop.price}</span>
-                        <Link href={`/workshops/${workshop.id}`}>
-                          <a className="text-primary hover:text-primary-dark text-sm font-medium">Learn more →</a>
+                        <Link href={`/workshops/${workshop.id}`} className="text-primary hover:text-primary-dark text-sm font-medium inline-block">
+                          Learn more →
                         </Link>
                       </div>
                     </div>
@@ -106,10 +106,8 @@ const HeroSection = () => {
               )}
               
               <div className="mt-4 text-center">
-                <Link href="/workshops">
-                  <a className="text-primary hover:text-primary-dark font-medium inline-block">
-                    View all workshops <span className="ml-1">→</span>
-                  </a>
+                <Link href="/workshops" className="text-primary hover:text-primary-dark font-medium inline-block">
+                  View all workshops <span className="ml-1">→</span>
                 </Link>
               </div>
             </div>
