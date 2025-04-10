@@ -12,6 +12,7 @@ import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ParentDashboardPage from "@/pages/ParentDashboardPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import PaymentConfirmationPage from "@/pages/PaymentConfirmationPage";
 import NotFound from "@/pages/not-found";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
