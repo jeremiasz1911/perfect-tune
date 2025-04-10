@@ -62,6 +62,7 @@ function App() {
                 </ProtectedRoute>
               )}
             </Route>
+            <Route path="/payment-confirmation" component={PaymentConfirmationPage} />
             <Route component={NotFound} />
           </Switch>
         </AnimatePresence>
