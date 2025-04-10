@@ -10,6 +10,8 @@ import {
   query,
   where,
   Timestamp,
+  orderBy,
+  limit,
   DocumentData,
   DocumentReference,
   CollectionReference,
@@ -25,6 +27,8 @@ export const classesCollection = collection(db, "classes");
 export const enrollmentsCollection = collection(db, "enrollments");
 export const paymentsCollection = collection(db, "payments");
 export const attendanceCollection = collection(db, "attendance");
+export const workshopsCollection = collection(db, "workshops");
+export const notificationsCollection = collection(db, "notifications");
 
 // User related functions
 export const createUser = async (uid: string, userData: any) => {
@@ -145,4 +149,115 @@ export const getAttendanceByEnrollmentId = async (enrollmentId: string) => {
     id: doc.id,
     ...doc.data()
   }));
+};
+
+// Workshops related functions
+export const getWorkshops = async () => {
+  const querySnapshot = await getDocs(workshopsCollection);
+  
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+};
+
+export const getWorkshopById = async (workshopId: string) => {
+  const workshopDocRef = doc(db, "workshops", workshopId);
+  const workshopDoc = await getDoc(workshopDocRef);
+  return workshopDoc.exists() ? { id: workshopDoc.id, ...workshopDoc.data() } : null;
+};
+
+export const createWorkshop = async (workshopData: any) => {
+  const docRef = await addDoc(workshopsCollection, {
+    ...workshopData,
+    createdAt: Timestamp.now()
+  });
+  return docRef;
+};
+
+export const updateWorkshop = async (workshopId: string, workshopData: any) => {
+  const workshopDocRef = doc(db, "workshops", workshopId);
+  await updateDoc(workshopDocRef, workshopData);
+  return workshopDocRef;
+};
+
+// Notification related functions
+export const createNotification = async (notificationData: any) => {
+  const docRef = await addDoc(notificationsCollection, {
+    ...notificationData,
+    createdAt: Timestamp.now(),
+    read: false
+  });
+  return docRef;
+};
+
+export const getUserNotifications = async (userId: string) => {
+  const q = query(
+    notificationsCollection, 
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(20)
+  );
+  const querySnapshot = await getDocs(q);
+  
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  const notificationRef = doc(db, "notifications", notificationId);
+  await updateDoc(notificationRef, { read: true });
+  return notificationRef;
+};
+
+// TPay payment processing functions
+export interface TPay {
+  createPayment: (amount: number, description: string, email: string, returnUrl: string) => Promise<any>;
+  verifyPayment: (paymentId: string) => Promise<any>;
+}
+
+// This is a mock implementation - in production you would integrate with the actual TPay API
+export const tpay: TPay = {
+  createPayment: async (amount: number, description: string, email: string, returnUrl: string) => {
+    // In a real implementation, you would call the TPay API here
+    // and return the payment ID and URL
+    console.log("Creating TPay payment:", { amount, description, email, returnUrl });
+    
+    // Create a payment record in our database
+    const paymentData = {
+      amount,
+      description,
+      email,
+      status: "pending",
+      currency: "PLN",
+      paymentMethod: "Tpay",
+      createdAt: Timestamp.now()
+    };
+    
+    const paymentRef = await addDoc(paymentsCollection, paymentData);
+    
+    // In a real implementation, you would return the TPay payment URL and ID
+    return {
+      paymentId: paymentRef.id,
+      paymentUrl: `https://secure.tpay.com?payment=${paymentRef.id}`,
+      success: true
+    };
+  },
+  
+  verifyPayment: async (paymentId: string) => {
+    // In a real implementation, you would verify the payment status with TPay
+    const paymentRef = doc(db, "payments", paymentId);
+    const payment = await getDoc(paymentRef);
+    
+    if (!payment.exists()) {
+      return { success: false, error: "Payment not found" };
+    }
+    
+    // Simulate a successful payment
+    await updateDoc(paymentRef, { status: "completed" });
+    
+    return { success: true, status: "completed" };
+  }
 };

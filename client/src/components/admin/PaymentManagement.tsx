@@ -45,6 +45,9 @@ import { motion } from 'framer-motion';
 import { fadeIn } from '@/lib/animations';
 import { toast } from '@/hooks/use-toast';
 import { FaEllipsisV, FaFileInvoice, FaSearch, FaFilter } from 'react-icons/fa';
+import { useEffect } from 'react';
+import { paymentsCollection } from '@/lib/db';
+import { getDocs } from 'firebase/firestore';
 
 interface Payment {
   id: string;
@@ -54,7 +57,8 @@ interface Payment {
   date: string;
   type: 'class' | 'workshop' | 'materials';
   status: 'paid' | 'pending' | 'overdue';
-  method: 'credit_card' | 'bank_transfer' | 'cash' | 'other';
+  method: 'Tpay' | 'bank_transfer' | 'cash' | 'other';
+  currency: string;
   description: string;
 }
 
@@ -68,7 +72,8 @@ const PaymentManagement = () => {
       date: '2025-04-05',
       type: 'class',
       status: 'paid',
-      method: 'credit_card',
+      method: 'Tpay',
+      currency: 'PLN',
       description: 'Piano Lessons - April 2025'
     },
     {
@@ -80,6 +85,7 @@ const PaymentManagement = () => {
       type: 'class',
       status: 'paid',
       method: 'bank_transfer',
+      currency: 'PLN',
       description: 'Guitar Lessons - April 2025'
     },
     {
@@ -90,7 +96,8 @@ const PaymentManagement = () => {
       date: '2025-04-08',
       type: 'workshop',
       status: 'paid',
-      method: 'credit_card',
+      method: 'Tpay',
+      currency: 'PLN',
       description: 'Summer Music Workshop'
     },
     {
@@ -102,6 +109,7 @@ const PaymentManagement = () => {
       type: 'materials',
       status: 'pending',
       method: 'other',
+      currency: 'PLN',
       description: 'Music Books and Sheet Music'
     },
     {
@@ -113,6 +121,7 @@ const PaymentManagement = () => {
       type: 'class',
       status: 'overdue',
       method: 'bank_transfer',
+      currency: 'PLN',
       description: 'Violin Lessons - March 2025'
     },
     {
@@ -124,6 +133,7 @@ const PaymentManagement = () => {
       type: 'class',
       status: 'pending',
       method: 'cash',
+      currency: 'PLN',
       description: 'Drum Lessons - April 2025'
     },
     {
@@ -134,10 +144,44 @@ const PaymentManagement = () => {
       date: '2025-04-09',
       type: 'workshop',
       status: 'paid',
-      method: 'credit_card',
+      method: 'Tpay',
+      currency: 'PLN',
       description: 'Songwriting Workshop'
     }
   ]);
+  
+  // Load payments from Firestore
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const querySnapshot = await getDocs(paymentsCollection);
+        const paymentData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            studentName: data.studentName || 'Unknown Student',
+            parentName: data.parentName || 'Unknown Parent',
+            amount: data.amount / 100, // Convert from cents to PLN
+            date: data.date || data.paymentDate?.toDate().toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+            type: data.type || 'class',
+            status: data.status || 'pending',
+            method: data.method || data.paymentMethod || 'Tpay',
+            currency: data.currency || 'PLN', 
+            description: data.description || 'Payment'
+          } as Payment;
+        });
+        
+        if (paymentData.length > 0) {
+          setPayments(paymentData);
+          console.log("Loaded payments from Firestore:", paymentData);
+        }
+      } catch (error) {
+        console.error("Error fetching payments:", error);
+      }
+    };
+    
+    fetchPayments();
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -227,7 +271,7 @@ const PaymentManagement = () => {
               <h4 className="text-green-700 font-semibold">Paid</h4>
               <div className="flex items-end justify-between mt-2">
                 <span className="text-3xl font-bold text-green-700">
-                  ${payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                  {payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0).toFixed(2)} PLN
                 </span>
                 <span className="text-green-600">
                   {payments.filter(p => p.status === 'paid').length} payments
@@ -239,7 +283,7 @@ const PaymentManagement = () => {
               <h4 className="text-yellow-700 font-semibold">Pending</h4>
               <div className="flex items-end justify-between mt-2">
                 <span className="text-3xl font-bold text-yellow-700">
-                  ${payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                  {payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0).toFixed(2)} PLN
                 </span>
                 <span className="text-yellow-600">
                   {payments.filter(p => p.status === 'pending').length} payments
