@@ -24,17 +24,17 @@ const HeroSection = () => {
         const mockWorkshops: Workshop[] = [
           {
             id: "1",
-            name: "Guitar Fundamentals",
-            date: "July 15, 2023",
-            time: "2:00 PM",
+            name: "Wartszaty z produkcji muzyki",
+            date: "24 kwietnia 2025",
+            time: "16:30",
             spotsLeft: 4,
             price: 45
           },
           {
             id: "2",
-            name: "Piano for Beginners",
-            date: "July 22, 2023",
-            time: "10:00 AM",
+            name: "Warszaty z gry na ukulele",
+            date: "25 lipca 2025",
+            time: "10:00",
             spotsLeft: 2,
             price: 50
           }
@@ -59,27 +59,27 @@ const HeroSection = () => {
         <div className="flex flex-col md:flex-row items-center">
           <div className="w-full md:w-1/2 mb-10 md:mb-0">
             <h1 className="font-accent text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Discover the <span className="text-primary">Joy</span> of Music
+              Odkryj <span className="text-primary">Radość</span> z  Muzyki
             </h1>
             <p className="text-lg md:text-xl mb-8 text-neutral-100">
-              Join our workshops and classes to explore your musical talents in a supportive environment.
+              Dołącz do naszych warsztatów i zajęć, aby odkryć swoje talenty muzyczne w przyjaznym środowisku.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/workshops">
-                <Button className="bg-primary hover:bg-primary-dark text-white font-medium px-6 py-3 w-full sm:w-auto">
-                  Explore Workshops
+                <Button className="bg-primary hover:bg-white hover:text-black text-white  px-6 py-3 w-full sm:w-auto">
+                  Sprawdz Warsztaty
                 </Button>
               </Link>
               <Link href="/classes">
-                <Button variant="outline" className="border-2 border-white hover:bg-white hover:text-neutral-800 text-white font-medium px-6 py-3 w-full sm:w-auto">
-                  View Regular Classes
+                <Button className="border-2 bg-white/0 border-white hover:bg-gray-200 hover:text-neutral-800 text-white font-medium px-6 py-3 w-full sm:w-auto">
+                  Zobacz Zajęcia
                 </Button>
               </Link>
             </div>
           </div>
           <div className="w-full md:w-1/2 flex justify-center">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md text-neutral-800">
-              <h3 className="font-heading text-xl font-bold mb-4 text-center">Upcoming Workshops</h3>
+              <h3 className="font-heading text-xl font-bold mb-4 text-center">Nadchodzące Warsztaty:</h3>
               
               {loading ? (
                 <div className="flex justify-center py-8">
@@ -91,13 +91,13 @@ const HeroSection = () => {
                     <div key={workshop.id} className="mb-4 last:mb-0 p-4 border-l-4 border-primary bg-neutral-50 rounded">
                       <div className="flex justify-between">
                         <h4 className="font-bold text-primary">{workshop.name}</h4>
-                        <span className="text-sm bg-secondary-light text-white px-2 py-1 rounded-full">{workshop.spotsLeft} spots left</span>
+                        <span className="text-sm bg-secondary-light text-neutral-500 px-2 py-1 rounded-full">Zostały {workshop.spotsLeft}  miejsca</span>
                       </div>
                       <p className="text-neutral-600 text-sm">{workshop.date} • {workshop.time}</p>
                       <div className="mt-2 flex justify-between items-center">
-                        <span className="text-neutral-700">${workshop.price}</span>
+                        <span className="text-neutral-700">{workshop.price} zł</span>
                         <Link href={`/workshops/${workshop.id}`} className="text-primary hover:text-primary-dark text-sm font-medium inline-block">
-                          Learn more →
+                          Dowiedz się więcej →
                         </Link>
                       </div>
                     </div>
@@ -107,7 +107,7 @@ const HeroSection = () => {
               
               <div className="mt-4 text-center">
                 <Link href="/workshops" className="text-primary hover:text-primary-dark font-medium inline-block">
-                  View all workshops <span className="ml-1">→</span>
+                  Zobacz wszystkie warsztaty <span className="ml-1">→</span>
                 </Link>
               </div>
             </div>

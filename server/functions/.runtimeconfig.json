@@ -1,0 +1,12 @@
+{
+  "app": {
+    "webhook_url": "https://f2b230727960.ngrok-free.app/perfect-tune/us-central1/api/tpay/webhook",
+    "return_error_url": "http://localhost:5173/payments/failure",
+    "return_url": "http://localhost:5173/payments/success"
+  },
+  "tpay": {
+    "merchant_id": "148409",
+    "base_url": "https://secure.tpay.com",
+    "secret": "=f3#kqd$&rVEAu%W-c8"
+  }
+}

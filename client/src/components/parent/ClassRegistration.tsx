@@ -1,33 +1,30 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 } from "@/components/ui/card";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { FaMusic, FaGuitar, FaPiano, FaMicrophone, FaDrum, FaViolin, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaDollarSign } from "react-icons/fa";
+import {
+  FaMusic, FaGuitar, FaMicrophone, FaDrum, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaDollarSign
+} from "react-icons/fa";
+import {
+  getLatestUnpaidInvoiceId,
+  // ⬇⬇⬇ DODAJ TEN IMPORT
+  createEnrollmentRequest,
+  getEnrollmentsByChildId,
+  startPaymentForInvoice,
+} from "@/lib/db";
+import { db, auth } from "@/lib/firebase";
+import { collection, getDocs, getDoc, doc } from "firebase/firestore";
+
 
 interface ChildData {
   id: string;
@@ -48,8 +45,21 @@ interface ClassData {
   attendance: number;
 }
 
+type EnrolledClass = {
+  enrollmentId: string;
+  classId: string;        // id lekcji (lessons/<id> lub classes/<id>)
+  className: string;
+  schedule: string;
+  location: string;
+  billingModel: "monthly" | "per_lesson";
+  price: number;
+  status: string;         // active/inactive
+};
+
+type BillingModel = "monthly" | "per_lesson";
+
 interface AvailableClass {
-  id: string;
+  id: string;                 // == lessonId
   name: string;
   type: string;
   description: string;
@@ -58,6 +68,7 @@ interface AvailableClass {
   location: string;
   ageRange: string;
   price: number;
+  billingModel: BillingModel; // ⬅ dodane
   capacity: number;
   spotsLeft: number;
 }
@@ -75,112 +86,383 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [classTypeFilter, setClassTypeFilter] = useState<string>("all");
-  
+  const [enrolled, setEnrolled] = useState<EnrolledClass[]>([]);
+
+  const user = auth.currentUser;
+  const parentId = user?.uid ?? "";
   const { toast } = useToast();
 
-  // Get the available classes (mock data for now)
-  useEffect(() => {
-    // In a real application, this data would come from Firebase
-    const mockAvailableClasses: AvailableClass[] = [
-      {
-        id: "class1",
-        name: "Piano Fundamentals",
-        type: "instrument",
-        description: "Learn the basics of piano playing, including proper technique, note reading, and simple songs.",
-        instructor: "Sarah Miller",
-        schedule: "Tuesdays, 4:00 PM - 5:00 PM",
-        location: "Room 101",
-        ageRange: "7-12",
-        price: 120,
-        capacity: 8,
-        spotsLeft: 3
-      },
-      {
-        id: "class2",
-        name: "Guitar for Beginners",
-        type: "instrument",
-        description: "Start your guitar journey with proper technique, basic chords, and strumming patterns.",
-        instructor: "Michael Johnson",
-        schedule: "Mondays, 5:00 PM - 6:00 PM",
-        location: "Room 105",
-        ageRange: "8-14",
-        price: 130,
-        capacity: 8,
-        spotsLeft: 2
-      },
-      {
-        id: "class3",
-        name: "Music Theory for Kids",
-        type: "theory",
-        description: "A fun way to learn musical concepts, notation, rhythm, and ear training through games and activities.",
-        instructor: "Emily Davis",
-        schedule: "Thursdays, 5:00 PM - 6:00 PM",
-        location: "Room 203",
-        ageRange: "7-12",
-        price: 95,
-        capacity: 10,
-        spotsLeft: 4
-      },
-      {
-        id: "class4",
-        name: "Vocal Training",
-        type: "vocal",
-        description: "Develop proper breathing techniques, vocal control, and expression through fun vocal exercises.",
-        instructor: "Laura Wilson",
-        schedule: "Wednesdays, 4:30 PM - 5:30 PM",
-        location: "Room 202",
-        ageRange: "9-15",
-        price: 110,
-        capacity: 8,
-        spotsLeft: 3
-      },
-      {
-        id: "class5",
-        name: "Rock Band Workshop",
-        type: "ensemble",
-        description: "Learn to play in a band setting, focusing on rhythm, listening skills, and performance techniques.",
-        instructor: "James Brown",
-        schedule: "Fridays, 4:00 PM - 6:00 PM",
-        location: "Room 108",
-        ageRange: "12-16",
-        price: 150,
-        capacity: 10,
-        spotsLeft: 5
-      }
-    ];
-    
-    setAvailableClasses(mockAvailableClasses);
-  }, []);
+  const base =
+    location.hostname === "localhost" || location.hostname === "127.0.0.1"
+      ? "http://127.0.0.1:5001/perfect-tune/us-central1/api"
+      : "https://us-central1-perfect-tune.cloudfunctions.net/api";
 
-  const handleRegister = async () => {
-    if (!selectedChild) {
-      toast({
-        title: "Child Not Selected",
-        description: "Please select a child before enrolling in a class.",
-        variant: "destructive",
-      });
+function postToGateway(gatewayUrl: string, form: Record<string, any>) {
+  if (!gatewayUrl || !form || typeof form !== "object") return;
+
+  const formEl = document.createElement("form");
+  formEl.method = "POST";
+  formEl.action = gatewayUrl;
+  formEl.style.display = "none";
+
+  Object.entries(form).forEach(([k, v]) => {
+    // zachowaj wartość dokładnie taką, jak przyszła z backendu
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = k;
+    // jeżeli backend zwróci stringi – super. Jeżeli liczby, NIE formatuj na siłę.
+    input.value = typeof v === "string" ? v : (v != null ? String(v) : "");
+    formEl.appendChild(input);
+  });
+
+  document.body.appendChild(formEl);
+  console.log("[Tpay submit]", gatewayUrl, form);
+  formEl.submit();
+}
+
+
+async function payByInvoiceCF(invoiceId: string, childId: string) {
+  // 1) Pobierz fakturę
+  const invSnap = await getDoc(doc(db, "invoices", invoiceId));
+  if (!invSnap.exists()) throw new Error("Invoice not found");
+  const inv: any = invSnap.data();
+
+  // 2) Dane do payloadu
+  const amount = Number(inv.amount);
+  if (!amount || amount <= 0) throw new Error("Invalid invoice amount");
+
+  const description = String(inv.description || "Opłata za zajęcia");
+  const parentId = auth.currentUser?.uid || "";
+
+  // studentName z children/<childId>
+  let studentName = "Student";
+  const cSnap = await getDoc(doc(db, "children", childId));
+  if (cSnap.exists()) {
+    const c: any = cSnap.data();
+    const nm = [c.name, c.surname].filter(Boolean).join(" ").trim();
+    if (nm) studentName = nm;
+  }
+
+  // parentName + email z auth/users/<uid>
+  let parentName = auth.currentUser?.displayName || "Parent";
+  let email = auth.currentUser?.email || "";
+  if (parentId) {
+    const uSnap = await getDoc(doc(db, "users", parentId));
+    if (uSnap.exists()) {
+      const u: any = uSnap.data();
+      parentName = u.fullName || u.name || parentName;
+      email = email || u.email || "";
+    }
+  }
+  if (!email) throw new Error("Brak e-maila płatnika");
+
+  // 3) Wywołaj CF /initiatePayment (ona policzy md5, doda crc itd.)
+  const res = await fetch(`${base}/initiatePayment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount,
+      description,
+      studentName,
+      parentName,
+      userId: parentId,
+      email, // CF może wykorzystać do pola email dla Tpay
+    }),
+  });
+
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${txt}`);
+
+  const { gatewayUrl, form } = JSON.parse(txt);
+  if (!gatewayUrl || !form) throw new Error("Nieprawidłowa odpowiedź z backendu");
+
+  // 4) Auto-POST do Tpay (pełny komplet pól)
+  postToGateway(gatewayUrl, form);
+}
+
+
+
+async function payInvoiceViaCF(invoiceId: string) {
+  try {
+    // 1) Pobierz fakturę
+    const invSnap = await getDoc(doc(db, "invoices", invoiceId));
+    if (!invSnap.exists()) {
+      toast({ title: "Invoice not found", description: "Nie znaleziono rachunku.", variant: "destructive" });
       return;
     }
-    
+    const inv: any = invSnap.data();
+
+    // 2) Walidacja i przygotowanie danych
+    const amount = Number(inv.amount);
+    const currency = String(inv.currency || "PLN");
+    const description = String(inv.description || "Opłata za zajęcia");
+    const parentId = auth.currentUser?.uid || "";
+
+    // e-mail z auth lub users/<uid>
+    let email = auth.currentUser?.email || "";
+    if (!email && parentId) {
+      const u = await getDoc(doc(db, "users", parentId));
+      email = (u.exists() && (u.data() as any)?.email) || "";
+    }
+
+    if (!amount || amount <= 0) {
+      toast({ title: "Błąd płatności", description: "Nieprawidłowa kwota na fakturze.", variant: "destructive" });
+      return;
+    }
+    if (!email) {
+      toast({ title: "Brak e-maila", description: "Uzupełnij e-mail na koncie, aby opłacić rachunek.", variant: "destructive" });
+      return;
+    }
+
+    const origin = window.location.origin;
+    const returnUrl = `${origin}/payments/return?invoiceId=${invoiceId}`;
+    const failureUrl = `${origin}/payments/return?invoiceId=${invoiceId}&status=failed`;
+
+    // 3) Payload dla CF – dajemy aliasy nazw pól, żeby backend nie marudził
+    const payload = {
+      invoiceId,                     // często wymagane top-level
+      amount,
+      amountMinorUnits: Math.round(amount * 100),
+      currency,
+      description,
+      userId: parentId,
+      email,                         // alias A
+      payerEmail: email,             // alias B
+      customerEmail: email,          // alias C
+      returnUrl,                     // alias A
+      successUrl: returnUrl,         // alias B
+      failureUrl,
+      meta: {
+        invoiceId,
+        classId: inv.classId,
+        childId: inv.childId,
+        parentId,
+      },
+    };
+
+    // 4) Spróbuj CF /initiatePayment
+    let usedFallback = false;
+    try {
+      const res = await fetch(`${base}/initiatePayment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      let data: any;
+      try { data = JSON.parse(text); } catch {
+        throw new Error("Nieprawidłowa odpowiedź z backendu (brak JSON).");
+      }
+
+      // Preferuj bezpośredni redirect
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      // Fallback na form POST – ale nie wysyłaj pustych wartości
+      if (data.gatewayUrl && data.form && Object.keys(data.form).length) {
+        postToGateway(data.gatewayUrl, data.form);
+        return;
+      }
+
+      // Jeśli tu dotarliśmy, odpowiedź nie zawiera nic użytecznego
+      throw new Error("Backend nie zwrócił redirectUrl ani poprawnego 'form'.");
+    } catch (e) {
+      console.warn("[/initiatePayment] błąd/niepełna odp. – fallback na startPaymentForInvoice:", e);
+      usedFallback = true;
+    }
+
+    // 5) Fallback – gwarantowany flow z db.ts (działa od ręki)
+    const res2 = await startPaymentForInvoice({ invoiceId, payerEmail: email, returnUrl });
+    if (typeof res2 === "string" && res2) {
+      // czasem backend zwraca URL do redirectu
+      window.location.href = res2;
+      return;
+    }
+
+    if (res2 && typeof res2 === "object") {
+      const { gatewayUrl, form, redirectUrl } = res2 as any;
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+      if (gatewayUrl && form) {
+        postToGateway(gatewayUrl, form);
+        return;
+      }
+    }
+
+  throw new Error("Nie udało się uzyskać adresu płatności.");
+  } catch (err: any) {
+    console.error(err);
+    toast({ title: "Błąd płatności", description: String(err?.message || err), variant: "destructive" });
+  }
+}
+
+
+  // ⬇ Pobierz dostępne lekcje (z lessons)
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, "lessons"));
+        const list: AvailableClass[] = snap.docs.map(d => {
+          const data: any = d.data();
+
+          const scheduleText = data?.schedule
+            ? [
+                (data.schedule?.days || []).join(", "),
+                [data.schedule?.startTime, data.schedule?.endTime].filter(Boolean).join("–"),
+              ].filter(Boolean).join(" • ")
+            : "—";
+
+          // ustal model i cenę
+          const inferModel: BillingModel =
+            (data?.billing?.model as BillingModel) ||
+            (data?.billing?.pricePerLesson != null || data?.price != null
+              ? "per_lesson"
+              : "monthly");
+
+          const price =
+            inferModel === "monthly"
+              ? Number(data?.billing?.priceMonthly ?? data?.price ?? 0)
+              : Number(data?.billing?.pricePerLesson ?? data?.price ?? 0);
+
+          return {
+            id: d.id,
+            name: data?.title || data?.name || "Zajęcia",
+            type: data?.type || "instrument",
+            description: data?.description || "",
+            instructor: data?.instructor || "",
+            schedule: scheduleText,
+            location: data?.location || "",
+            ageRange: data?.ageRange || "",
+            price,
+            billingModel: inferModel, // ⬅
+            capacity: Number(data?.capacity || 0),
+            spotsLeft:
+              typeof data?.spotsLeft === "number"
+                ? data.spotsLeft
+                : Math.max(0, Number(data?.capacity || 0) - Number((data?.participants || []).length || 0)),
+          };
+        });
+
+        setAvailableClasses(list);
+      } catch (e) {
+        console.error(e);
+        toast({
+          title: "Błąd",
+          description: "Nie udało się wczytać zajęć z bazy.",
+          variant: "destructive",
+        });
+      }
+    })();
+  }, [toast]);
+  
+  useEffect(() => {
+    if (!selectedChild) {
+      setEnrolled([]);
+      return;
+    }
+    (async () => {
+      try {
+        const enrolls = await getEnrollmentsByChildId(selectedChild);
+        const rows: EnrolledClass[] = await Promise.all(
+          (enrolls || [])
+            .filter((e: any) => e?.status !== "inactive")
+            .map(async (e: any) => {
+              // spróbuj lessons, fallback do classes
+              const lref = doc(db, "lessons", e.classId);
+              let snap = await getDoc(lref);
+              if (!snap.exists()) {
+                snap = await getDoc(doc(db, "classes", e.classId));
+              }
+              const data: any = snap.exists() ? snap.data() : {};
+
+              const scheduleText = data?.schedule
+                ? [
+                    (data.schedule?.days || []).join(", "),
+                    [data.schedule?.startTime, data.schedule?.endTime]
+                      .filter(Boolean)
+                      .join("–"),
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
+                : "—";
+
+              const billingModel: BillingModel =
+                (data?.billing?.model as BillingModel) ||
+                (data?.billing?.pricePerLesson != null || data?.price != null
+                  ? "per_lesson"
+                  : "monthly");
+
+              const price =
+                billingModel === "monthly"
+                  ? Number(data?.billing?.priceMonthly ?? data?.price ?? 0)
+                  : Number(data?.billing?.pricePerLesson ?? data?.price ?? 0);
+
+              return {
+                enrollmentId: e.id,
+                classId: e.classId,
+                className: data?.title || data?.name || "Zajęcia",
+                schedule: scheduleText,
+                location: data?.location || "",
+                billingModel,
+                price,
+                status: e?.status || "active",
+              };
+            })
+        );
+        setEnrolled(rows);
+      } catch (err) {
+        console.error(err);
+        toast({
+          title: "Błąd",
+          description: "Nie udało się wczytać zapisanych zajęć.",
+          variant: "destructive",
+        });
+      }
+    })();
+  }, [selectedChild, toast]);
+
+
+  // ⬇ Rejestracja: ZAMIAR → wniosek do admina
+  const handleRegister = async () => {
+    if (!selectedChild) {
+      toast({ title: "Child Not Selected", description: "Select a child first.", variant: "destructive" });
+      return;
+    }
     if (!selectedClass) return;
-    
+    if (!user) {
+      toast({ title: "Not signed in", description: "Please log in to enroll.", variant: "destructive" });
+      return;
+    }
+
     setIsRegistering(true);
     try {
-      // In a real application, this would enroll the child in Firebase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Enrollment Successful",
-        description: `${getChildName(selectedChild)} has been enrolled in ${selectedClass.name}.`,
+      await createEnrollmentRequest({
+        parentId,
+        childId: selectedChild,
+        lessonId: selectedClass.id,  // ⬅ WAŻNE: lessonId
+        action: "enroll",
       });
-      
-      setIsDialogOpen(false);
-      // In a real application, you would refresh the classes list here
-    } catch (error) {
-      console.error("Error enrolling in class:", error);
+
       toast({
-        title: "Enrollment Failed",
-        description: "There was an error enrolling in the class. Please try again.",
+        title: "Request sent",
+        description:
+          "Twoje zgłoszenie zostało wysłane do administratora. Po akceptacji dostaniesz powiadomienie i możliwość opłaty.",
+      });
+      setIsDialogOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Błąd",
+        description: String(err?.message || err),
         variant: "destructive",
       });
     } finally {
@@ -188,60 +470,80 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
     }
   };
 
-  const handleTransfer = async (classId: string) => {
-    // Implementation for transferring a child to a different class/group
-    toast({
-      title: "Feature Coming Soon",
-      description: "The ability to transfer between classes will be available in the next update.",
-    });
-  };
-
+  // ⬇ Wypisanie: też wniosek do admina
   const handleUnenroll = async (classId: string, childId: string) => {
-    if (!confirm("Are you sure you want to unenroll from this class?")) {
+    if (!classId) {
+      toast({ title: "Brak ID zajęć", description: "Nie udało się ustalić lekcji do wypisania.", variant: "destructive" });
+      return;
+   }
+    if (!confirm("Are you sure you want to request unenrollment from this class?")) return;
+    if (!user) {
+      toast({ title: "Not signed in", description: "Please log in first.", variant: "destructive" });
       return;
     }
-    
     try {
-      // In a real application, this would unenroll the child from the class in Firebase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: "Unenrollment Successful",
-        description: "Your child has been unenrolled from the class.",
+      await createEnrollmentRequest({
+        parentId,
+        childId,
+        lessonId: classId,   // ⬅ przekazujemy id lekcji
+        action: "unenroll",
       });
-      
-      // In a real application, you would refresh the classes list here
-    } catch (error) {
-      console.error("Error unenrolling from class:", error);
       toast({
-        title: "Unenrollment Failed",
-        description: "There was an error unenrolling from the class. Please try again.",
+        title: "Request sent",
+        description: "Wniosek o wypisanie wysłany do administratora.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Błąd",
+        description: String(err?.message || err),
         variant: "destructive",
       });
     }
   };
+
+  // ⬇ „Zapłać teraz” – bez zmian, ale funkcja była niewidoczna w tym pliku
+  const handlePayNow = async (classId: string, childId: string) => {
+  if (!user) {
+    toast({ title: "Not signed in", description: "Please log in to pay.", variant: "destructive" });
+    return;
+  }
+
+  // znajdź najnowszą nieopłaconą fakturę
+  const invoiceId = await getLatestUnpaidInvoiceId(parentId, childId, classId);
+  if (!invoiceId) {
+    toast({ title: "Brak płatności", description: "Nie ma oczekującego rachunku." });
+    return;
+  }
+
+  try {
+    await payByInvoiceCF(invoiceId, childId);
+  } catch (e: any) {
+    console.error(e);
+    toast({ title: "Błąd płatności", description: String(e?.message || e), variant: "destructive" });
+  }
+};
+
+
+
+
+
 
   const getChildName = (childId: string): string => {
     const child = children.find(c => c.id === childId);
     return child ? `${child.name} ${child.surname}` : "Unknown Child";
   };
 
-  const getChildClasses = (childId: string): ClassData[] => {
-    return classes.filter(c => c.childId === childId);
-  };
+  const getChildClasses = (): EnrolledClass[] => enrolled;
+
 
   const getClassTypeIcon = (type: string) => {
     switch (type) {
-      case "instrument":
-        return <FaGuitar className="text-primary" />;
-      case "vocal":
-        return <FaMicrophone className="text-primary" />;
-      case "theory":
-        return <FaMusic className="text-primary" />;
-      case "ensemble":
-        return <FaDrum className="text-primary" />;
-      default:
-        return <FaMusic className="text-primary" />;
+      case "instrument": return <FaGuitar className="text-primary" />;
+      case "vocal": return <FaMicrophone className="text-primary" />;
+      case "theory": return <FaMusic className="text-primary" />;
+      case "ensemble": return <FaDrum className="text-primary" />;
+      default: return <FaMusic className="text-primary" />;
     }
   };
 
@@ -256,9 +558,7 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
         <Card>
           <CardHeader>
             <CardTitle>Select a Child</CardTitle>
-            <CardDescription>
-              Choose a child to view their classes or register for new ones
-            </CardDescription>
+            <CardDescription>Choose a child to view their classes or register for new ones</CardDescription>
           </CardHeader>
           <CardContent>
             <Select value={selectedChild} onValueChange={setSelectedChild}>
@@ -280,24 +580,24 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
       {selectedChild && (
         <div>
           <h3 className="text-xl font-semibold mb-4">{getChildName(selectedChild)}'s Classes</h3>
-          
+
           <Tabs defaultValue="enrolled" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="enrolled">Enrolled Classes</TabsTrigger>
               <TabsTrigger value="available">Available Classes</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="enrolled">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {getChildClasses(selectedChild).length > 0 ? (
                   getChildClasses(selectedChild).map((classItem) => (
-                    <Card key={classItem.id}>
+                    <Card key={classItem.enrollmentId || `${classItem.classId}-${selectedChild}`}>
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <CardTitle>{classItem.className}</CardTitle>
-                          <Badge variant={classItem.status === "Active" ? "default" : "secondary"}>
-                            {classItem.status}
-                          </Badge>
+                         <Badge variant={classItem.status?.toLowerCase() === "active" ? "default" : "secondary"}>
+                          {classItem.status}
+                        </Badge>
                         </div>
                         <CardDescription>{classItem.schedule}</CardDescription>
                       </CardHeader>
@@ -316,20 +616,30 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                             <span className="text-sm">Attendance: {classItem.attendance}%</span>
                           </div>
                         </div>
+                        <div className="flex items-center">
+                          <FaDollarSign className="text-primary mr-2" size={14} />
+                          <span className="text-sm">
+                            {classItem.billingModel === "monthly"
+                              ? `Fee: $${classItem.price}/month`
+                              : `Price: $${classItem.price} / lesson`}
+                          </span>
+                        </div>
                       </CardContent>
                       <CardFooter className="flex justify-between pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTransfer(classItem.id)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => {/* opcjonalnie transfer flow */}}>
                           Transfer
+                        </Button>
+                        <Button size="sm" onClick={() => handlePayNow(classItem.classId, selectedChild)}>
+                          Pay
+                        </Button>
+                        <Button onClick={() => console.log(classItem.classId, selectedChild)}>
+                          TEST
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
-                          onClick={() => handleUnenroll(classItem.id, selectedChild)}
+                          onClick={() => handleUnenroll(classItem.classId, selectedChild)}
                         >
                           Unenroll
                         </Button>
@@ -343,85 +653,52 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                     <p className="text-neutral-600 mb-4">
                       {getChildName(selectedChild)} is not currently enrolled in any classes.
                     </p>
-                    <Button onClick={() => setActiveTab("available")}>
-                      Browse Available Classes
-                    </Button>
+                    <Button onClick={() => setActiveTab("available")}>Browse Available Classes</Button>
                   </div>
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="available">
               <div className="mb-6">
                 <h4 className="font-medium mb-2">Filter by Class Type</h4>
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant={classTypeFilter === "all" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setClassTypeFilter("all")}
-                    className={classTypeFilter === "all" ? "bg-primary hover:bg-primary-dark" : ""}
-                  >
-                    All Classes
-                  </Button>
-                  <Button 
-                    variant={classTypeFilter === "instrument" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setClassTypeFilter("instrument")}
-                    className={classTypeFilter === "instrument" ? "bg-primary hover:bg-primary-dark" : ""}
-                  >
-                    <FaGuitar className="mr-2" size={12} />
-                    Instrument
-                  </Button>
-                  <Button 
-                    variant={classTypeFilter === "vocal" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setClassTypeFilter("vocal")}
-                    className={classTypeFilter === "vocal" ? "bg-primary hover:bg-primary-dark" : ""}
-                  >
-                    <FaMicrophone className="mr-2" size={12} />
-                    Vocal
-                  </Button>
-                  <Button 
-                    variant={classTypeFilter === "theory" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setClassTypeFilter("theory")}
-                    className={classTypeFilter === "theory" ? "bg-primary hover:bg-primary-dark" : ""}
-                  >
-                    <FaMusic className="mr-2" size={12} />
-                    Theory
-                  </Button>
-                  <Button 
-                    variant={classTypeFilter === "ensemble" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setClassTypeFilter("ensemble")}
-                    className={classTypeFilter === "ensemble" ? "bg-primary hover:bg-primary-dark" : ""}
-                  >
-                    <FaDrum className="mr-2" size={12} />
-                    Ensemble
-                  </Button>
+                  {["all","instrument","vocal","theory","ensemble"].map(v => (
+                    <Button
+                      key={v}
+                      variant={classTypeFilter === v ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setClassTypeFilter(v)}
+                      className={classTypeFilter === v ? "bg-primary hover:bg-primary-dark" : ""}
+                    >
+                      {v === "instrument" && <FaGuitar className="mr-2" size={12} />}
+                      {v === "vocal" && <FaMicrophone className="mr-2" size={12} />}
+                      {v === "theory" && <FaMusic className="mr-2" size={12} />}
+                      {v === "ensemble" && <FaDrum className="mr-2" size={12} />}
+                      {v === "all" ? "All Classes" : v[0].toUpperCase() + v.slice(1)}
+                    </Button>
+                  ))}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredAvailableClasses.length > 0 ? (
                   filteredAvailableClasses.map((classItem) => (
-                    <Card key={classItem.id}>
+                      <Card key={classItem.enrollmentId || `${classItem.classId}-${selectedChild}`}>
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center">
                             {getClassTypeIcon(classItem.type)}
                             <CardTitle className="ml-2">{classItem.name}</CardTitle>
                           </div>
-                          <Badge variant="outline" className="text-primary border-primary">
+                          <Badge variant={classItem.status?.toLowerCase() === "active" ? "default" : "secondary"}>
                             {classItem.spotsLeft} spots left
                           </Badge>
                         </div>
                         <CardDescription>{classItem.instructor}</CardDescription>
                       </CardHeader>
                       <CardContent className="pb-2">
-                        <p className="text-sm text-neutral-600 mb-3">
-                          {classItem.description}
-                        </p>
+                        <p className="text-sm text-neutral-600 mb-3">{classItem.description}</p>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div className="flex items-center">
                             <FaClock className="text-primary mr-2" size={14} />
@@ -437,20 +714,23 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                           </div>
                           <div className="flex items-center">
                             <FaDollarSign className="text-primary mr-2" size={14} />
-                            <span>${classItem.price}/month</span>
+                            <span>
+                              ${classItem.price}
+                              {classItem.billingModel === "monthly" ? "/month" : " per lesson"}
+                            </span>
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter className="pt-4 border-t">
-                        <Dialog open={isDialogOpen && selectedClass?.id === classItem.id} onOpenChange={(open) => {
-                          setIsDialogOpen(open);
-                          if (!open) setSelectedClass(null);
-                        }}>
+                        <Dialog
+                          open={isDialogOpen && selectedClass?.id === classItem.id}
+                          onOpenChange={(open) => {
+                            setIsDialogOpen(open);
+                            if (!open) setSelectedClass(null);
+                          }}
+                        >
                           <DialogTrigger asChild>
-                            <Button 
-                              className="w-full"
-                              onClick={() => setSelectedClass(classItem)}
-                            >
+                            <Button className="w-full" onClick={() => setSelectedClass(classItem)}>
                               Enroll Now
                             </Button>
                           </DialogTrigger>
@@ -461,7 +741,7 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                                 You are about to enroll {getChildName(selectedChild)} in {classItem.name}.
                               </DialogDescription>
                             </DialogHeader>
-                            
+
                             <div className="py-4">
                               <div className="bg-neutral-50 p-4 rounded-lg space-y-2 mb-4">
                                 <div className="flex justify-between">
@@ -477,28 +757,25 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                                   <span>{classItem.location}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="font-medium">Monthly Fee:</span>
-                                  <span className="font-bold">${classItem.price}.00</span>
+                                  <span className="font-medium">
+                                    {classItem.billingModel === "monthly" ? "Monthly Fee:" : "Price per lesson:"}
+                                  </span>
+                                  <span className="font-bold">
+                                    ${classItem.price}{classItem.billingModel === "monthly" ? ".00" : ""}
+                                  </span>
                                 </div>
                               </div>
-                              
+
                               <p className="text-sm text-neutral-600">
                                 By clicking "Confirm Enrollment," you agree to our terms and conditions, including our payment and cancellation policies.
                               </p>
                             </div>
-                            
+
                             <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setIsDialogOpen(false)}
-                                disabled={isRegistering}
-                              >
+                              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isRegistering}>
                                 Cancel
                               </Button>
-                              <Button
-                                onClick={handleRegister}
-                                disabled={isRegistering}
-                              >
+                              <Button onClick={handleRegister} disabled={isRegistering}>
                                 {isRegistering ? (
                                   <div className="flex items-center">
                                     <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -520,14 +797,8 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
                 ) : (
                   <div className="md:col-span-2 p-8 text-center bg-neutral-50 rounded-lg">
                     <h3 className="text-lg font-semibold mb-2">No Classes Found</h3>
-                    <p className="text-neutral-600">
-                      There are no available classes matching your filter criteria.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-4"
-                      onClick={() => setClassTypeFilter("all")}
-                    >
+                    <p className="text-neutral-600">There are no available classes matching your filter criteria.</p>
+                    <Button variant="outline" className="mt-4" onClick={() => setClassTypeFilter("all")}>
                       View All Classes
                     </Button>
                   </div>
@@ -537,7 +808,7 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
           </Tabs>
         </div>
       )}
-      
+
       {!selectedChild && (
         <div className="p-8 text-center bg-neutral-50 rounded-lg">
           <FaMusic className="w-12 h-12 mx-auto text-neutral-300 mb-4" />

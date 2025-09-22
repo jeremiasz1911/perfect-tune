@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { createUser } from "@/lib/db";
 import { FaPlus, FaTrash, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface ChildData {
   id: string;
@@ -123,8 +125,22 @@ const RegisterPage = () => {
     try {
       // Create user in Firebase Auth
       const userCredential = await signupWithEmail(email, password);
-      
+
       if (userCredential?.uid) {
+        const parentId = userCredential.uid;
+        const childIds: string[] = [];
+        // Create children in Firestore
+        for (const child of children) {
+          // Dodaj dziecko i przekazuj dane oraz parentId
+          const newChildRef = await addDoc(collection(db, "children"), {
+            name: child.name,
+            surname: child.surname,
+            age: parseInt(child.age),
+            parentId: parentId,
+            createdAt: new Date(),
+          });
+          childIds.push(newChildRef.id);
+        }
         // Save user data to Firestore
         await createUser(userCredential.uid, {
           email,
@@ -137,11 +153,8 @@ const RegisterPage = () => {
           houseNumber,
           phoneNumber,
           role: "parent",
-          children: children.map(child => ({
-            name: child.name,
-            surname: child.surname,
-            age: parseInt(child.age)
-          }))
+          children: childIds,
+          createdAt: new Date()
         });
         
         toast({

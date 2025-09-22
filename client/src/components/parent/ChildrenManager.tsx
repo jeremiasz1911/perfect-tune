@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { FaPlus, FaTrash, FaEdit, FaSave, FaTimes } from "react-icons/fa";
-import { addChild } from "@/lib/db";
+import { addDoc, collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
 
+// Zmieniony interfejs dla dziecka – age jako number
 interface ChildData {
   id: string;
   name: string;
@@ -15,11 +17,8 @@ interface ChildData {
   age: number;
 }
 
-interface ChildrenManagerProps {
-  children: ChildData[];
-}
-
-const ChildrenManager = ({ children }: ChildrenManagerProps) => {
+const ChildrenManager = () => {
+  const [children, setChildren] = useState<ChildData[]>([]);
   const [addingChild, setAddingChild] = useState(false);
   const [editingChildId, setEditingChildId] = useState<string | null>(null);
   const [newChildName, setNewChildName] = useState("");
@@ -33,6 +32,39 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Funkcja pobierająca dzieci zalogowanego rodzica z kolekcji "children"
+  const fetchChildren = async () => {
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, "children"),
+        where("parentId", "==", user.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      const childrenList: ChildData[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          surname: data.surname,
+          age: data.age,
+        };
+      });
+      setChildren(childrenList);
+    } catch (error) {
+      console.error("Error fetching children:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load children. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchChildren();
+  }, [user]);
+
   const resetNewChildForm = () => {
     setNewChildName("");
     setNewChildSurname("");
@@ -42,7 +74,7 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newChildName || !newChildSurname || !newChildAge) {
       toast({
         title: "Missing Information",
@@ -63,11 +95,13 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
 
     setIsLoading(true);
     try {
-      // In a real application, this would add the child to Firebase
-      await addChild(user.uid, {
+      // Dodaj dziecko do kolekcji "children" z parentId
+      await addDoc(collection(db, "children"), {
         name: newChildName,
         surname: newChildSurname,
         age: parseInt(newChildAge),
+        parentId: user.uid,
+        createdAt: new Date(),
       });
       
       toast({
@@ -76,7 +110,7 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
       });
       
       resetNewChildForm();
-      // In a real application, you would refresh the children list here
+      fetchChildren(); // odśwież listę dzieci
     } catch (error) {
       console.error("Error adding child:", error);
       toast({
@@ -112,13 +146,20 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
 
     setIsLoading(true);
     try {
-      // In a real application, this would update the child data in Firebase
+      // Aktualizuj dane dziecka w Firestore
+      const childRef = doc(db, "children", childId);
+      await updateDoc(childRef, {
+        name: editChildName,
+        surname: editChildSurname,
+        age: parseInt(editChildAge),
+      });
+      
       toast({
         title: "Child Updated",
         description: "The child's information has been updated successfully.",
       });
       setEditingChildId(null);
-      // In a real application, you would refresh the children list here
+      fetchChildren(); // odśwież listę dzieci
     } catch (error) {
       console.error("Error updating child:", error);
       toast({
@@ -138,12 +179,14 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
 
     setIsLoading(true);
     try {
-      // In a real application, this would remove the child from Firebase
+      // Usuń dziecko z kolekcji "children"
+      await deleteDoc(doc(db, "children", childId));
+      
       toast({
         title: "Child Removed",
         description: "The child has been removed successfully.",
       });
-      // In a real application, you would refresh the children list here
+      fetchChildren(); // odśwież listę dzieci
     } catch (error) {
       console.error("Error removing child:", error);
       toast({
@@ -190,7 +233,7 @@ const ChildrenManager = ({ children }: ChildrenManagerProps) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {/* Add new child form */}
+          {/* Form for adding a new child */}
           {addingChild && (
             <Card className="bg-neutral-50">
               <CardContent className="pt-6">

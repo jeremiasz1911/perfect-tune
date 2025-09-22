@@ -1,169 +1,182 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { FaFilePdf, FaFileInvoice, FaCreditCard, FaFilter, FaDownload } from "react-icons/fa";
+import { FaFilePdf, FaCreditCard, FaFilter, FaDownload } from "react-icons/fa";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 
-interface PaymentData {
+type PaymentRow = {
   id: string;
   description: string;
-  amount: number;
-  date: string;
-  status: string;
+  amount: number;     // PLN
+  date: string;       // YYYY-MM-DD
+  status: "paid" | "pending" | "overdue";
   studentName: string;
-  currency?: string;
-  itemId?: string;
-  itemType?: 'class' | 'workshop' | 'materials';
-}
+  currency?: string;  // PLN
+  invoiceId?: string;
+};
 
-interface PaymentHistoryProps {
-  payments: PaymentData[];
-}
+const base =
+  typeof window !== "undefined" &&
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "http://127.0.0.1:5001/perfect-tune/us-central1/api"
+    : "https://us-central1-perfect-tune.cloudfunctions.net/api";
 
-const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
+export default function PaymentHistory() {
+  const { toast } = useToast();
+  const [userId, setUserId] = useState<string>("");
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [timeFilter, setTimeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<PaymentData | null>(null);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  
-  const { toast } = useToast();
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentRow | null>(null);
 
-  const currentDate = new Date();
-  const oneMonthAgo = new Date();
-  oneMonthAgo.setMonth(currentDate.getMonth() - 1);
-  
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(currentDate.getMonth() - 3);
-  
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+  // auth
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUserId(u?.uid || ""));
+    return () => unsub();
+  }, []);
 
-  const filteredPayments = payments.filter(payment => {
-    // Filter by time
-    if (timeFilter !== "all") {
-      const paymentDate = new Date(payment.date);
-      if (timeFilter === "1m" && paymentDate < oneMonthAgo) return false;
-      if (timeFilter === "3m" && paymentDate < threeMonthsAgo) return false;
-      if (timeFilter === "6m" && paymentDate < sixMonthsAgo) return false;
-    }
-    
-    // Filter by status
-    if (statusFilter !== "all") {
-      if (statusFilter === "paid" && !payment.status.toLowerCase().includes("paid")) return false;
-      if (statusFilter === "due" && !payment.status.toLowerCase().includes("due")) return false;
-    }
-    
-    return true;
-  });
-
-  const getTotalPaid = () => {
-    return payments
-      .filter(p => p.status.toLowerCase().includes("paid"))
-      .reduce((sum, p) => sum + p.amount, 0);
-  };
-
-  const getTotalDue = () => {
-    return payments
-      .filter(p => p.status.toLowerCase().includes("due"))
-      .reduce((sum, p) => sum + p.amount, 0);
-  };
-
-  const handleMakePayment = (payment: PaymentData) => {
-    setSelectedPayment(payment);
-    setIsPaymentDialogOpen(true);
-  };
-
-  const handleViewReceipt = (payment: PaymentData) => {
-    setSelectedPayment(payment);
-    setIsReceiptDialogOpen(true);
-  };
-
-  const handleDownloadInvoice = (paymentId: string) => {
-    toast({
-      title: "Download Started",
-      description: "Your invoice is being downloaded.",
-    });
-  };
-
-  const processPayment = async () => {
-    if (!cardNumber || !cardName || !cardExpiry || !cardCvc) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all payment fields.",
-        variant: "destructive",
-      });
+  // pobieranie „moich” płatności
+  useEffect(() => {
+    if (!userId) {
+      setPayments([]);
       return;
     }
+    const q = query(
+      collection(db, "payments"),
+      where("userId", "==", userId),
+      orderBy("date", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const rows: PaymentRow[] = snap.docs.map((d) => {
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          description: data.description || "Payment",
+          amount: Number(data.amount || 0) / 100, // z groszy
+          date: data.date || new Date().toISOString().split("T")[0],
+          status: (data.status || "pending") as any,
+          studentName: data.studentName || "Student",
+          currency: data.currency || "PLN",
+          invoiceId: data.invoiceId || undefined,
+        };
+      });
+      setPayments(rows);
+    });
+    return () => unsub();
+  }, [userId]);
 
-    setIsProcessingPayment(true);
-    try {
-      // In a real application, this would integrate with Tpay
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      toast({
-        title: "Payment Successful",
-        description: "Your payment has been processed successfully.",
-      });
-      
-      setIsPaymentDialogOpen(false);
-      // In a real application, you would refresh the payments list here
-    } catch (error) {
-      console.error("Error processing payment:", error);
-      toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingPayment(false);
-      setCardNumber("");
-      setCardName("");
-      setCardExpiry("");
-      setCardCvc("");
-    }
-  };
+  const filteredPayments = useMemo(() => {
+    const currentDate = new Date();
+    const oneMonthAgo = new Date(currentDate); oneMonthAgo.setMonth(currentDate.getMonth() - 1);
+    const threeMonthsAgo = new Date(currentDate); threeMonthsAgo.setMonth(currentDate.getMonth() - 3);
+    const sixMonthsAgo = new Date(currentDate); sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
+
+    return payments.filter(p => {
+      if (timeFilter !== "all") {
+        const dt = new Date(p.date);
+        if (timeFilter === "1m" && dt < oneMonthAgo) return false;
+        if (timeFilter === "3m" && dt < threeMonthsAgo) return false;
+        if (timeFilter === "6m" && dt < sixMonthsAgo) return false;
+      }
+      if (statusFilter !== "all" && statusFilter !== p.status) return false;
+      return true;
+    });
+  }, [payments, timeFilter, statusFilter]);
+
+  const totals = useMemo(() => {
+    const paid = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
+    const due  = payments.filter(p => p.status !== "paid").reduce((s, p) => s + p.amount, 0);
+    const next = payments.find(p => p.status !== "paid")?.date || "No payments due";
+    return { paid, due, next };
+  }, [payments]);
 
   const getStatusBadge = (status: string) => {
-    if (status.toLowerCase().includes("paid")) {
-      return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
-    } else if (status.toLowerCase().includes("due")) {
-      return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">{status}</Badge>;
-    } else {
-      return <Badge variant="outline">{status}</Badge>;
+    if (status === "paid") return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+    if (status === "pending") return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+    if (status === "overdue") return <Badge variant="destructive">Overdue</Badge>;
+    return <Badge variant="outline">{status}</Badge>;
+  };
+
+  async function handlePayNow(payment: PaymentRow) {
+    const u = auth.currentUser;
+    if (!u) {
+      toast({ title: "Zaloguj się", description: "Musisz być zalogowany, aby zapłacić.", variant: "destructive" });
+      return;
     }
+    setIsProcessingPayment(true);
+    try {
+      const res = await fetch(`${base}/initiatePayment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: payment.amount,                 // w PLN (CF zamienia na grosze)
+          description: payment.description,
+          studentName: payment.studentName,
+          parentName: u.displayName || u.email || "Rodzic",
+          userId: u.uid,
+          currency: payment.currency || "PLN",
+          email: u.email || undefined,
+        }),
+      });
+
+      const text = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+
+      const { gatewayUrl, form } = JSON.parse(text);
+      if (!gatewayUrl || !form) throw new Error("Nieprawidłowa odpowiedź bramki.");
+
+      // Auto-POST do Tpay (bez pustych pól)
+      const formEl = document.createElement("form");
+      formEl.method = "POST";
+      formEl.action = gatewayUrl;
+      formEl.style.display = "none";
+      Object.entries(form).forEach(([k, v]) => {
+        if (v == null || String(v).trim() === "") return;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = String(v);
+        formEl.appendChild(input);
+      });
+      if (!formEl.children.length) throw new Error("Brak parametrów do płatności.");
+      document.body.appendChild(formEl);
+      formEl.submit();
+    } catch (err: any) {
+      console.error("PayNow error:", err);
+      toast({ title: "Payment Error", description: err?.message || "Problem przy inicjalizacji płatności.", variant: "destructive" });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  }
+
+  async function handleDownloadInvoice(payment: PaymentRow) {
+    try {
+      if (!payment.invoiceId) {
+        toast({ title: "Brak faktury", description: "Dla tej płatności nie ma jeszcze faktury (czy jest opłacona?)." });
+        return;
+      }
+      // Stream PDF z CF:
+      const url = `${base}/invoices/${payment.invoiceId}/pdf`;
+      // Otwórz w nowej karcie (albo fetch i blob):
+      window.open(url, "_blank");
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Błąd pobierania", description: String(e?.message || e), variant: "destructive" });
+    }
+  }
+
+  const openReceipt = (p: PaymentRow) => {
+    setSelectedPayment(p);
+    setIsReceiptDialogOpen(true);
   };
 
   return (
@@ -173,7 +186,7 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
           <div>
             <CardTitle className="text-2xl">Payment History</CardTitle>
             <p className="text-sm text-neutral-500 mt-1">
-              View and manage your payment history and upcoming payments.
+              View and manage your payments.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -197,11 +210,13 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="due">Due</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
+
         <CardContent>
           <div className="rounded-md border overflow-hidden mb-6">
             <Table>
@@ -217,45 +232,48 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               </TableHeader>
               <TableBody>
                 {filteredPayments.length > 0 ? (
-                  filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">{payment.description}</TableCell>
-                      <TableCell>{payment.studentName}</TableCell>
-                      <TableCell>{payment.date}</TableCell>
-                      <TableCell>{payment.amount.toFixed(2)} {payment.currency || 'PLN'}</TableCell>
-                      <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                  filteredPayments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.description}</TableCell>
+                      <TableCell>{p.studentName}</TableCell>
+                      <TableCell>{p.date}</TableCell>
+                      <TableCell>{p.amount.toFixed(2)} {p.currency || "PLN"}</TableCell>
+                      <TableCell>{getStatusBadge(p.status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          {payment.status.toLowerCase().includes("paid") ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleViewReceipt(payment)}
-                              className="h-8"
-                            >
-                              <FaFilePdf className="mr-1" size={12} />
-                              Receipt
-                            </Button>
+                          {p.status === "paid" ? (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openReceipt(p)}
+                                className="h-8"
+                              >
+                                <FaFilePdf className="mr-1" size={12} />
+                                Receipt
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownloadInvoice(p)}
+                                className="h-8"
+                              >
+                                <FaDownload size={12} />
+                                <span className="sr-only">Download</span>
+                              </Button>
+                            </>
                           ) : (
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
-                              onClick={() => handleMakePayment(payment)}
+                              onClick={() => handlePayNow(p)}
                               className="h-8"
+                              disabled={isProcessingPayment}
                             >
                               <FaCreditCard className="mr-1" size={12} />
-                              Pay Now
+                              {isProcessingPayment ? "Processing..." : "Pay Now"}
                             </Button>
                           )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDownloadInvoice(payment.id)}
-                            className="h-8"
-                          >
-                            <FaDownload size={12} />
-                            <span className="sr-only">Download</span>
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -263,169 +281,32 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-6 text-neutral-500">
-                      No payments found matching your filter criteria.
+                      No payments found.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-neutral-500 mb-1">Total Paid</p>
-                  <p className="text-2xl font-bold text-green-600">{getTotalPaid().toFixed(2)} PLN</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-neutral-500 mb-1">Outstanding Balance</p>
-                  <p className="text-2xl font-bold text-yellow-600">{getTotalDue().toFixed(2)} PLN</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <p className="text-sm text-neutral-500 mb-1">Next Payment Due</p>
-                  <p className="text-2xl font-bold">
-                    {payments.find(p => p.status.toLowerCase().includes("due"))?.date || "No payments due"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="pt-6"><div className="text-center">
+              <p className="text-sm text-neutral-500 mb-1">Total Paid</p>
+              <p className="text-2xl font-bold text-green-600">{totals.paid.toFixed(2)} PLN</p>
+            </div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-center">
+              <p className="text-sm text-neutral-500 mb-1">Outstanding Balance</p>
+              <p className="text-2xl font-bold text-yellow-600">{totals.due.toFixed(2)} PLN</p>
+            </div></CardContent></Card>
+            <Card><CardContent className="pt-6"><div className="text-center">
+              <p className="text-sm text-neutral-500 mb-1">Next Payment Due</p>
+              <p className="text-2xl font-bold">{totals.next}</p>
+            </div></CardContent></Card>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payment Methods */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Methods</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-12 h-8 bg-blue-500 rounded flex items-center justify-center text-white mr-4">
-                <i className="fas fa-credit-card"></i>
-              </div>
-              <div>
-                <p className="font-medium">Credit Card</p>
-                <p className="text-sm text-neutral-500">**** **** **** 4567</p>
-              </div>
-            </div>
-            <Badge>Default</Badge>
-          </div>
-          <div className="mt-4">
-            <Button variant="outline">
-              <FaCreditCard className="mr-2" />
-              Add Payment Method
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Make a Payment</DialogTitle>
-            <DialogDescription>
-              Complete your payment for {selectedPayment?.description}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <div className="bg-neutral-50 p-4 rounded-lg space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span className="font-medium">Description:</span>
-                <span>{selectedPayment?.description}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Student:</span>
-                <span>{selectedPayment?.studentName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Amount:</span>
-                <span className="font-bold">{selectedPayment?.amount.toFixed(2)} {selectedPayment?.currency || 'PLN'}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="card-number">Card Number</Label>
-                <Input
-                  id="card-number"
-                  placeholder="1234 5678 9012 3456"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="card-name">Cardholder Name</Label>
-                <Input
-                  id="card-name"
-                  placeholder="John Doe"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="card-expiry">Expiry Date</Label>
-                  <Input
-                    id="card-expiry"
-                    placeholder="MM/YY"
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="card-cvc">CVC</Label>
-                  <Input
-                    id="card-cvc"
-                    placeholder="123"
-                    value={cardCvc}
-                    onChange={(e) => setCardCvc(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPaymentDialogOpen(false)}
-              disabled={isProcessingPayment}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={processPayment}
-              disabled={isProcessingPayment}
-            >
-              {isProcessingPayment ? (
-                <div className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </div>
-              ) : (
-                `Pay $${selectedPayment?.amount.toFixed(2)}`
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Receipt Dialog */}
+      {/* Receipt Dialog (prostą fakturę pokazujemy wglądowo; PDF pobierzesz przyciskiem) */}
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -434,53 +315,34 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
               Receipt for {selectedPayment?.description}
             </DialogDescription>
           </DialogHeader>
-          
           <div className="py-4">
-            <div className="border-t border-b py-6 my-4">
-              <div className="flex justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg">MusicAcademy</h3>
-                  <p className="text-sm text-neutral-500">123 Music Street, Suite 101</p>
-                  <p className="text-sm text-neutral-500">Harmony City, CA 90210</p>
-                </div>
-                <div className="text-right">
-                  <h4 className="font-bold">Receipt</h4>
-                  <p className="text-sm text-neutral-500">ID: {selectedPayment?.id}</p>
-                  <p className="text-sm text-neutral-500">Date: {selectedPayment?.date}</p>
-                </div>
-              </div>
-              
-              <div className="border-t border-b py-4 my-4">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium">Description</span>
-                  <span className="font-medium">Amount</span>
+            {selectedPayment ? (
+              <div className="border rounded p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-500">Payment ID</span>
+                  <span className="font-medium">{selectedPayment.id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{selectedPayment?.description}</span>
-                  <span>${selectedPayment?.amount.toFixed(2)}</span>
+                  <span className="text-sm text-neutral-500">Date</span>
+                  <span className="font-medium">{selectedPayment.date}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-500">Amount</span>
+                  <span className="font-bold">{selectedPayment.amount.toFixed(2)} {selectedPayment.currency || "PLN"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-neutral-500">Status</span>
+                  <span>{getStatusBadge(selectedPayment.status)}</span>
                 </div>
               </div>
-              
-              <div className="flex justify-between mt-4 font-bold">
-                <span>Total Paid</span>
-                <span>${selectedPayment?.amount.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <p className="text-sm text-neutral-500 mb-4">Thank you for your payment!</p>
-              <p className="text-xs text-neutral-400">This is a computer-generated receipt and does not require a signature.</p>
-            </div>
+            ) : null}
           </div>
-          
           <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
             <Button
-              variant="outline"
-              onClick={() => setIsReceiptDialogOpen(false)}
+              onClick={() => selectedPayment && handleDownloadInvoice(selectedPayment)}
+              disabled={!selectedPayment?.invoiceId}
             >
-              Close
-            </Button>
-            <Button>
               <FaDownload className="mr-2" size={12} />
               Download PDF
             </Button>
@@ -489,6 +351,4 @@ const PaymentHistory = ({ payments }: PaymentHistoryProps) => {
       </Dialog>
     </div>
   );
-};
-
-export default PaymentHistory;
+}

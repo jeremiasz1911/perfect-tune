@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Helmet } from "react-helmet";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +8,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { FaGoogle } from "react-icons/fa";
-import { Link } from "wouter";
+import { motion } from "framer-motion";
+
+// delikatny pattern + gradient tła jak na HomePage
+const DOT_SVG = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+      <circle cx="1" cy="1" r="1" fill="#ffffff" opacity="0.06"/>
+   </svg>`
+);
+const DOT_DATA_URL = `data:image/svg+xml,${DOT_SVG}`;
+
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.55, delay, ease: [0.22, 0.61, 0.36, 1] } },
+});
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -20,12 +32,16 @@ const LoginPage = () => {
   const { login, loginWithGoogle, checkIsAdmin } = useAuth();
   const [, navigate] = useLocation();
 
+  const checkUserRole = async (uid: string): Promise<boolean> => {
+    return await checkIsAdmin(uid);
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: "Brakujące pola",
+        description: "Uzupełnij e-mail i hasło.",
         variant: "destructive",
       });
       return;
@@ -35,19 +51,14 @@ const LoginPage = () => {
     try {
       const user = await login(email, password);
       if (user) {
-        toast({
-          title: "Success",
-          description: "You have successfully logged in",
-        });
-        
-        // Check if admin and redirect accordingly
+        toast({ title: "Zalogowano", description: "Witaj ponownie w PerfectTune!" });
         const isAdmin = await checkUserRole(user.uid);
         navigate(isAdmin ? "/dashboard/admin" : "/dashboard/parent");
       }
     } catch (error: any) {
       toast({
-        title: "Login Failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        title: "Logowanie nieudane",
+        description: error?.message || "Sprawdź dane i spróbuj ponownie.",
         variant: "destructive",
       });
     } finally {
@@ -60,19 +71,14 @@ const LoginPage = () => {
     try {
       const user = await loginWithGoogle();
       if (user) {
-        toast({
-          title: "Success",
-          description: "You have successfully logged in with Google",
-        });
-        
-        // Check if admin and redirect accordingly
+        toast({ title: "Zalogowano przez Google", description: "Miło Cię widzieć!" });
         const isAdmin = await checkUserRole(user.uid);
         navigate(isAdmin ? "/dashboard/admin" : "/dashboard/parent");
       }
     } catch (error: any) {
       toast({
-        title: "Login Failed",
-        description: error.message || "Could not log in with Google. Please try again.",
+        title: "Błąd logowania Google",
+        description: error?.message || "Spróbuj ponownie.",
         variant: "destructive",
       });
     } finally {
@@ -80,156 +86,177 @@ const LoginPage = () => {
     }
   };
 
-  // Function to check if user is admin, uses the checkIsAdmin function from auth context
-  const checkUserRole = async (uid: string): Promise<boolean> => {
-    return await checkIsAdmin(uid);
-  };
-
   return (
     <>
       <Helmet>
-        <title>Login - MusicAcademy</title>
-        <meta name="description" content="Log in to your MusicAcademy account to manage your classes and workshops." />
+        <title>Zaloguj się — PerfectTune</title>
+        <meta
+          name="description"
+          content="Zaloguj się do PerfectTune, aby zarządzać zajęciami i warsztatami."
+        />
       </Helmet>
-      
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="flex flex-col md:flex-row">
-                <div className="w-full md:w-1/2 bg-primary p-8 text-white">
-                  <h2 className="font-accent text-3xl font-bold mb-6">Welcome Back</h2>
-                  <p className="mb-8 opacity-90">
-                    Log in to access your dashboard, manage your classes, and track your progress.
-                  </p>
-                  
-                  <form className="space-y-4" onSubmit={handleEmailLogin}>
-                    <div>
-                      <Label htmlFor="email" className="text-white">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        className="w-full px-4 py-2 rounded bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-white"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="password" className="text-white">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="w-full px-4 py-2 rounded bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-white"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Checkbox 
-                          id="remember" 
-                          checked={rememberMe}
-                          onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" 
-                        />
-                        <Label htmlFor="remember" className="ml-2 text-sm text-white">Remember me</Label>
-                      </div>
-                      <Link href="/forgot-password" className="text-sm text-white hover:underline">
-                        Forgot password?
-                      </Link>
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={isLoading}
-                      className="w-full bg-white text-primary hover:bg-neutral-100 font-medium py-2 px-4 rounded transition-all duration-200"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Logging in...
-                        </div>
-                      ) : "Log In"}
-                    </Button>
 
-                    <div className="relative flex items-center justify-center mt-6">
-                      <div className="border-t border-white border-opacity-30 w-full"></div>
-                      <span className="bg-primary px-2 text-white text-sm">Or</span>
-                      <div className="border-t border-white border-opacity-30 w-full"></div>
-                    </div>
+      <div className="relative min-h-[88vh] bg-[#0B0F19] text-white">
+        {/* TŁO */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `
+              radial-gradient(1200px 600px at 10% -10%, rgba(88,101,242,.22), transparent 55%),
+              radial-gradient(900px 480px at 90% 0%, rgba(186,230,253,.18), transparent 60%),
+              radial-gradient(1000px 800px at 50% 120%, rgba(56,189,248,.10), transparent 55%),
+              url("${DOT_DATA_URL}")
+            `,
+            backgroundRepeat: "no-repeat, no-repeat, no-repeat, repeat",
+            backgroundSize: "auto, auto, auto, 32px 32px",
+          }}
+        />
 
-                    <Button 
-                      type="button" 
-                      onClick={handleGoogleLogin}
-                      disabled={isLoading}
-                      className="w-full flex items-center justify-center bg-white text-neutral-800 hover:bg-neutral-100 font-medium py-2 px-4 rounded transition-all duration-200"
-                    >
-                      <FaGoogle className="mr-2" />
-                      Sign in with Google
-                    </Button>
-                  </form>
+        <div className="relative container mx-auto px-4 py-12 md:py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+            {/* Lewy panel — info/benefity */}
+            <motion.div
+              {...fadeUp(0.05)}
+              className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-8 md:p-10 flex flex-col justify-center"
+            >
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 mb-5">
+                <span className="text-xs tracking-wide text-white/80">PerfectTune — panel rodzica</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+                Zaloguj się do swojego konta
+              </h1>
+              <p className="mt-3 text-white/85 max-w-xl">
+                Zarządzaj zapisami, płatnościami i komunikacją z instruktorem. Szybko i wygodnie.
+              </p>
+
+              <div className="mt-6 grid sm:grid-cols-2 gap-3 text-sm">
+                {[
+                  "Rezerwacje i płatności online",
+                  "Harmonogram zajęć dzieci",
+                  "Kontakt z instruktorem",
+                  "Powiadomienia o warsztatach",
+                ].map((t) => (
+                  <div
+                    key={t}
+                    className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3"
+                  >
+                    <span className="text-white/85">{t}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <Link href="/register">
+                  <Button variant="outline" className="border-white/15 text-white hover:bg-white/10">
+                    Nie masz konta? Zarejestruj się
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Prawy panel — formularz */}
+            <motion.div
+              {...fadeUp(0.12)}
+              className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur p-8 md:p-10"
+            >
+              <form className="space-y-5" onSubmit={handleEmailLogin}>
+                <div>
+                  <Label htmlFor="email" className="text-white">Adres e-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="twoj@email.com"
+                    className="mt-2 bg-neutral-900/40 border-white/10 text-white placeholder:text-white/60"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
                 </div>
-                
-                <div className="w-full md:w-1/2 p-8">
-                  <h2 className="font-accent text-3xl font-bold text-neutral-800 mb-6">Create an Account</h2>
-                  <p className="text-neutral-600 mb-6">
-                    Register to enroll in classes, manage your children's musical education, and stay updated on new offerings.
-                  </p>
-                  
-                  <Link href="/register">
-                    <Button className="block w-full bg-primary hover:bg-primary-dark text-white text-center font-medium py-3 px-4 rounded transition-all duration-200 mb-6">
-                      Register Now
-                    </Button>
+
+                <div>
+                  <Label htmlFor="password" className="text-white">Hasło</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="mt-2 bg-neutral-900/40 border-white/10 text-white placeholder:text-white/60"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(!!checked)}
+                    />
+                    <Label htmlFor="remember" className="text-sm text-white/85">
+                      Zapamiętaj mnie
+                    </Label>
+                  </div>
+                  <Link href="/forgot-password" className="text-sm text-white/85 hover:text-white">
+                    Nie pamiętasz hasła?
                   </Link>
-                  
-                  <div className="bg-neutral-50 rounded-lg p-6 border border-neutral-100">
-                    <h3 className="font-bold text-lg mb-4">As a registered parent, you can:</h3>
-                    <ul className="space-y-3">
-                      <li className="flex items-start">
-                        <svg className="text-primary flex-shrink-0 h-5 w-5 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-neutral-700 ml-3">Manage multiple children's class schedules</span>
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="text-primary flex-shrink-0 h-5 w-5 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-neutral-700 ml-3">Track attendance and progress</span>
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="text-primary flex-shrink-0 h-5 w-5 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-neutral-700 ml-3">Make secure online payments</span>
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="text-primary flex-shrink-0 h-5 w-5 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-neutral-700 ml-3">Communicate directly with instructors</span>
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="text-primary flex-shrink-0 h-5 w-5 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-neutral-700 ml-3">Reserve spots in upcoming workshops</span>
-                      </li>
-                    </ul>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-neutral-900 font-semibold"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z"
+                        />
+                      </svg>
+                      Logowanie…
+                    </div>
+                  ) : (
+                    "Zaloguj się"
+                  )}
+                </Button>
+
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-white/10"></span>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white/0 px-3 text-xs text-white/70">albo</span>
                   </div>
                 </div>
-              </div>
-            </div>
+
+                <Button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full border-white/15 text-white hover:bg-white/10"
+                >
+                  <FaGoogle className="mr-2" />
+                  Zaloguj przez Google
+                </Button>
+
+                <p className="text-xs text-white/60 text-center mt-2">
+                  Logując się, akceptujesz nasz Regulamin i Politykę Prywatności.
+                </p>
+              </form>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </div>
     </>
   );
 };

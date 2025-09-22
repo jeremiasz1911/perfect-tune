@@ -48,6 +48,7 @@ import { FaEllipsisV, FaFileInvoice, FaSearch, FaFilter } from 'react-icons/fa';
 import { useEffect } from 'react';
 import { paymentsCollection } from '@/lib/db';
 import { getDocs } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 interface Payment {
   id: string;
@@ -61,6 +62,10 @@ interface Payment {
   currency: string;
   description: string;
 }
+
+const functions = getFunctions();
+
+
 
 const PaymentManagement = () => {
   const [payments, setPayments] = useState<Payment[]>([
@@ -248,6 +253,49 @@ const PaymentManagement = () => {
     }
   };
 
+const base =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:5001/perfect-tune/us-central1/api"
+    : "https://us-central1-perfect-tune.cloudfunctions.net/api";
+
+  async function handlePayNow(payment: Payment) {
+    const res = await fetch(`${base}/initiatePayment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: payment.amount,
+        description: payment.description,
+        studentName: payment.studentName,
+        parentName: payment.parentName,
+        userId: "TEST_USER_ID",
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const { gatewayUrl, form } = await res.json();
+
+    // Auto-POST do Tpay:
+    const formEl = document.createElement("form");
+    formEl.method = "POST";
+    formEl.action = gatewayUrl; // np. https://secure.tpay.com
+    formEl.style.display = "none";
+
+    Object.entries(form).forEach(([k, v]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = String(v ?? "");
+      formEl.appendChild(input);
+    });
+
+    document.body.appendChild(formEl);
+    formEl.submit(); // -> otworzy panel Tpay z wyborem banków/BLIK
+  }
+
   return (
     <motion.div 
       className="container mx-auto px-4 py-8"
@@ -404,6 +452,9 @@ const PaymentManagement = () => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleMarkAsPaid(payment.id)}>
                                   Mark as Paid
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handlePayNow(payment)}>
+                                  Pay Now
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleSendReminder(payment)}>
                                   Send Reminder

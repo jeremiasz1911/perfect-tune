@@ -74,9 +74,9 @@ export const FirebaseInit: React.FC<FirebaseInitProps> = ({ children }) => {
           
           // Redirect user based on role
           if (isAdmin) {
-            setLocation('/admin');
+            setLocation('/dashboard/admin');
           } else {
-            setLocation('/parent');
+            setLocation('/dashboard/parent');
           }
         } catch (firebaseError) {
           console.error('Firebase operation error:', firebaseError);

@@ -12,6 +12,7 @@ import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ParentDashboardPage from "@/pages/ParentDashboardPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import SchoolsOfferPage from "@/pages/SchoolsOfferPage";
 import PaymentConfirmationPage from "@/pages/PaymentConfirmationPage";
 import NotFound from "@/pages/not-found";
 import Navbar from "@/components/layout/Navbar";
@@ -40,22 +41,22 @@ function App() {
           <Switch key={location}>
             <Route path="/" component={HomePage} />
             <Route path="/about" component={AboutPage} />
-            <Route path="/workshops" component={WorkshopsPage} />
-            <Route path="/gallery" component={GalleryPage} />
+            {/* <Route path="/gallery" component={GalleryPage} /> */}
             <Route path="/classes" component={ClassesPage} />
             <Route path="/login" component={LoginPage} />
             <Route path="/register" component={RegisterPage} />
             <Route path="/contact" component={ContactPage} />
             <Route path="/terms" component={TermsPage} />
+            {/* <Route path="/oferta" component={SchoolsOfferPage} /> */}
             <Route path="/privacy" component={PrivacyPage} />
-            <Route path="/parent">
+            <Route path="/dashboard/parent">
               {() => (
                 <ProtectedRoute role="parent">
                   <ParentDashboardPage />
                 </ProtectedRoute>
               )}
             </Route>
-            <Route path="/admin">
+            <Route path="/dashboard/admin">
               {() => (
                 <ProtectedRoute role="admin">
                   <AdminDashboardPage />
