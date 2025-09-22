@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions,firestore",
-    "deploy": "npm run build && firebase deploy --only functions"
+    "deploy": "npm run build && npm run build:functions && firebase deploy",
+    "build:functions": "tsc --project tsconfig.json"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
