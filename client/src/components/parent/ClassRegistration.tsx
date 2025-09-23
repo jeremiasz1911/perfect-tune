@@ -92,10 +92,7 @@ const ClassRegistration = ({ children, classes }: ClassRegistrationProps) => {
   const parentId = user?.uid ?? "";
   const { toast } = useToast();
 
-  const base =
-    location.hostname === "localhost" || location.hostname === "127.0.0.1"
-      ? "http://127.0.0.1:5001/perfect-tune/us-central1/api"
-      : "https://us-central1-perfect-tune.cloudfunctions.net/api";
+  const base = import.meta.env.VITE_API_BASE_URL; 
 
 function postToGateway(gatewayUrl: string, form: Record<string, any>) {
   if (!gatewayUrl || !form || typeof form !== "object") return;
@@ -156,7 +153,10 @@ async function payByInvoiceCF(invoiceId: string, childId: string) {
   }
   if (!email) throw new Error("Brak e-maila płatnika");
 
-  // 3) Wywołaj CF /initiatePayment (ona policzy md5, doda crc itd.)
+  const origin = window.location.origin;
+  const returnUrl  = `${origin}/payments/return?invoiceId=${invoiceId}`;
+  const failureUrl = `${origin}/payments/return?invoiceId=${invoiceId}&status=failed`;
+
   const res = await fetch(`${base}/initiatePayment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -166,7 +166,10 @@ async function payByInvoiceCF(invoiceId: string, childId: string) {
       studentName,
       parentName,
       userId: parentId,
-      email, // CF może wykorzystać do pola email dla Tpay
+      email,
+      returnUrl,
+      successUrl: returnUrl,
+      failureUrl,
     }),
   });
 

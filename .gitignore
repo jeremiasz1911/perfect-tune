@@ -9,3 +9,4 @@ irebase-debug.log
 *.log
 firebase-debug.log
 firebase-debug.*
+functions/.env* 

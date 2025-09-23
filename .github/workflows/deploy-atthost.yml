@@ -1,0 +1,35 @@
+name: Deploy frontend to AttHost
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      # rsync po SSH (polecane)
+      - name: Deploy via rsync
+        uses: burnett01/rsync-deployments@5.2
+        with:
+          switches: -avzr --delete
+          path: dist/public/
+          remote_path: ${{ secrets.ATTHOST_PATH }}
+          remote_host: ${{ secrets.ATTHOST_HOST }}
+          remote_user: ${{ secrets.ATTHOST_USER }}
+          remote_key: ${{ secrets.ATTHOST_SSH_KEY }}
+
+      - name: Upload .htaccess
+        run: |
+          echo "${{ secrets.ATTHOST_SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+          scp -i key.pem -o StrictHostKeyChecking=no scripts/htaccess-spa \
+            ${{ secrets.ATTHOST_USER }}@${{ secrets.ATTHOST_HOST }}:${{ secrets.ATTHOST_PATH }}/.htaccess

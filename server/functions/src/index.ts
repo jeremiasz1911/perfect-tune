@@ -213,37 +213,62 @@ const TPAY_ID     = process.env.TPAY_ID!;
 const TPAY_CRC    = process.env.TPAY_CRC!;      // z panelu Tpay
 const TPAY_SECRET = process.env.TPAY_SECRET!;   // Security code
 const GATEWAY = process.env.TPAY_ENV === "sandbox"
-  ? "https://secure.sandbox.tpay.com"
+  ? "https://secure.tpay.com"
   : "https://secure.tpay.com";
 
 app.post("/initiatePayment", async (req, res) => {
-  const { amount, description, email, returnUrl, successUrl, failureUrl } = req.body;
+  try {
+    const { amount, description, email, returnUrl, successUrl, failureUrl, meta = {} } = req.body;
 
-  const amountText = Number(amount).toFixed(2); // KLUCZOWE: 2 miejsca i kropka
-  const md5Input   = `${TPAY_ID}${amountText}${TPAY_CRC}${TPAY_SECRET}`;
-  const md5sum     = crypto.createHash("md5").update(md5Input, "utf8").digest("hex");
+    // 1) Wygeneruj payment i użyj jego ID jako crc
+    const payRef = await db.collection("payments").add({
+      status: "initiated",
+      amount: Math.round(Number(amount) * 100),   // grosze do PDF/rozliczeń
+      description: description || "Opłata za zajęcia",
+      email: String(email || ""),
+      meta,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    const crc = payRef.id;                      // <-- TO id będzie wracać w tr_crc w webhooku
 
-  const form: Record<string, string> = {
-    id: String(TPAY_ID),
-    // daj oba aliasy – nie każdy merchant ma ten sam wariant
-    amount: amountText,
-    kwota: amountText,
-    description: String(description || "Opłata za zajęcia"),
-    opis: String(description || "Opłata za zajęcia"),
-    email: String(email || ""),
-    crc: String(TPAY_CRC),
-    md5sum,
-    return_url: String(successUrl || returnUrl || ""),
-    error_url: String(failureUrl || returnUrl || ""),
-  };
+    // 2) Kwota z kropką i 2 miejscami
+    const amountText = Number(amount).toFixed(2);
 
-  console.log("[TPAY] gateway:", GATEWAY);
-  console.log("[TPAY] form:", form);
-  console.log("[TPAY] md5Input(masked):", `${TPAY_ID}${amountText}${TPAY_CRC}***`);
-  console.log("[TPAY] md5sum:", md5sum);
+    // 3) md5 wg spec: id + amount + crc + security_code
+    const md5Input = `${TPAY_ID}${amountText}${crc}${TPAY_SECRET}`;
+    const md5sum = crypto.createHash("md5").update(md5Input, "utf8").digest("hex");
 
-  res.json({ gatewayUrl: GATEWAY, form });
+    // 4) adres powiadomień (webhook)
+    const resultUrl = `${PUBLIC_FN_URL}/tpay/webhook`;
+
+    const form: Record<string, string> = {
+      id: String(TPAY_ID),
+      amount: amountText,
+      kwota: amountText,                  // alias – nie zaszkodzi
+      description: String(description || "Opłata za zajęcia"),
+      opis: String(description || "Opłata za zajęcia"),
+      email: String(email || ""),
+      crc,                                // <-- nasze ID płatności
+      md5sum,
+      result_url: resultUrl,              // <-- POWIADOMIENIA Tpay -> Twój webhook
+      return_url: String(successUrl || returnUrl || ""),
+      error_url: String(failureUrl || returnUrl || ""),
+      // opcjonalnie:
+      lang: "pl",
+    };
+
+    console.log("[TPAY] gateway:", GATEWAY);
+    console.log("[TPAY] form:", form);
+    console.log("[TPAY] md5Input(masked):", `${TPAY_ID}${amountText}${crc}***`);
+    console.log("[TPAY] md5sum:", md5sum);
+
+    res.json({ gatewayUrl: GATEWAY, form });
+  } catch (e:any) {
+    console.error("/initiatePayment error:", e);
+    res.status(400).send(String(e?.message || e));
+  }
 });
+
 
 
 // === Webhook Tpay ===
