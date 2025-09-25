@@ -13,6 +13,7 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import ParentDashboardPage from "@/pages/ParentDashboardPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import SchoolsOfferPage from "@/pages/SchoolsOfferPage";
+import PaymentsReturn from "@/pages/PaymentsReturn";
 import PaymentConfirmationPage from "@/pages/PaymentConfirmationPage";
 import NotFound from "@/pages/not-found";
 import Navbar from "@/components/layout/Navbar";
@@ -47,6 +48,7 @@ function App() {
             <Route path="/register" component={RegisterPage} />
             <Route path="/contact" component={ContactPage} />
             <Route path="/terms" component={TermsPage} />
+            <Route path="/payments/return" component={PaymentsReturn} />
             {/* <Route path="/oferta" component={SchoolsOfferPage} /> */}
             <Route path="/privacy" component={PrivacyPage} />
             <Route path="/dashboard/parent">

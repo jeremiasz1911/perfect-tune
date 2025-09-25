@@ -138,7 +138,7 @@ const AboutPage = () => {
                   className="absolute inset-0 bg-cover bg-center"
                   style={{
                     backgroundImage:
-                      "url('https://scontent-waw2-2.xx.fbcdn.net/v/t39.30808-6/470205622_9089808554391859_3986909528282179897_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=n0dBecyMWJ8Q7kNvwGSnXSz&_nc_oc=Adn_PBvygkaa2YB43i2GHdGecXIz-H7csznGZj-qojqyrcggTTh0-SBBIXfBDoytt6ZNC9_t6QYFqfeDIPRJlJzh&_nc_zt=23&_nc_ht=scontent-waw2-2.xx&_nc_gid=1QFRhykQrNv_7bN3A5PF0A&oh=00_Afa9ypkWM8SpjgQEB9Qn6w23-hTgBuesFibUL5vX6aMc4A&oe=68C85C98')",
+                      "url('https://scontent-waw2-2.xx.fbcdn.net/v/t39.30808-6/470205622_9089808554391859_3986909528282179897_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=5lMW79qrlz8Q7kNvwHNSDuy&_nc_oc=AdntdvKUvY1UiFAQt_yKRdhKzhkXEUSDGM3t545-EIz74rl0MfCsPaA5tqTogVocN98&_nc_zt=23&_nc_ht=scontent-waw2-2.xx&_nc_gid=WF_t7sA8sHXhEN5SW7dOAA&oh=00_AfawosGhozW1rf79q_dXsULnZNSqGH8XkgZrwZLdH1dyFA&oe=68DB4218')",
                     filter: "grayscale(8%) contrast(105%)",
                   }}
                 />

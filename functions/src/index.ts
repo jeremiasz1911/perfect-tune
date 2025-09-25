@@ -8,25 +8,29 @@ import bodyParser from "body-parser";
 import crypto from "crypto";
 import PDFDocument from "pdfkit";
 
+// ───────────────────────────────────────────────────────────────────────────────
+// Firebase init
+// ───────────────────────────────────────────────────────────────────────────────
 initializeApp();
 const db = getFirestore();
 const bucket = getStorage().bucket();
 
-// nad app.post("/initiatePayment") – stałe:
-const PROJECT_ID = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "";
-const REGION = "us-central1"; // to samo co w exports.api
-const PUBLIC_FN_URL =
-  `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/api`;
+// ───────────────────────────────────────────────────────────────────────────────
+// Express
+// ───────────────────────────────────────────────────────────────────────────────
 const app = express();
-
-
-
 app.use(cors({ origin: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Przydatne stałe do URL-i zwrotnych
+const PROJECT_ID = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "";
+const REGION = "us-central1";
+const PUBLIC_FN_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/api`;
 
-// ===== Pomocnicze: numeracja faktur =====
+// ───────────────────────────────────────────────────────────────────────────────
+// Narastająca numeracja faktur (YYYY/MM/NNN)
+// ───────────────────────────────────────────────────────────────────────────────
 async function getNextInvoiceNumber(): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
@@ -36,7 +40,7 @@ async function getNextInvoiceNumber(): Promise<string> {
   const docSnap = await counterRef.get();
 
   let seq = 1;
-  let prefix = `${year}/${month}`;
+  const prefix = `${year}/${month}`;
 
   if (!docSnap.exists) {
     await counterRef.set({ prefix, seq });
@@ -54,7 +58,9 @@ async function getNextInvoiceNumber(): Promise<string> {
   return `${prefix}/${String(seq).padStart(3, "0")}`;
 }
 
-// ===== PDF: generator do bufora =====
+// ───────────────────────────────────────────────────────────────────────────────
+// PDF faktury → Buffer
+// ───────────────────────────────────────────────────────────────────────────────
 function buildInvoicePdfBuffer(inv: any, seller: any, buyer: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40 });
@@ -71,24 +77,26 @@ function buildInvoicePdfBuffer(inv: any, seller: any, buyer: any): Promise<Buffe
     doc.text(`Data wystawienia: ${inv.issueDate}`, { align: "right" });
     if (inv.paidAt) doc.text(`Data opłacenia: ${inv.paidAt}`, { align: "right" });
 
+    // Sprzedawca
     doc.moveDown(1);
     doc.fontSize(14).text("Sprzedawca", { underline: true });
     doc.fontSize(11).text(seller.name);
     if (seller.address) doc.text(seller.address);
     if (seller.nip) doc.text(`NIP: ${seller.nip}`);
 
+    // Nabywca
     doc.moveDown(1);
     doc.fontSize(14).text("Nabywca", { underline: true });
     doc.fontSize(11).text(buyer.name || buyer.email || "Klient");
     if (buyer.email) doc.text(buyer.email);
     if (buyer.address) doc.text(buyer.address);
 
+    // Pozycje
     doc.moveDown(1.5);
     doc.fontSize(13).text("Pozycje:", { underline: true });
     doc.moveDown(0.5);
     doc.fontSize(11);
 
-    // Tabela (prosta)
     doc.text("Opis", 40, doc.y, { continued: true, width: 300 });
     doc.text("Ilość", 340, doc.y, { continued: true });
     doc.text("Cena", 400, doc.y, { continued: true });
@@ -126,42 +134,39 @@ function buildInvoicePdfBuffer(inv: any, seller: any, buyer: any): Promise<Buffe
   });
 }
 
-// ===== Tworzenie faktury (dokument + PDF w Storage) =====
+// ───────────────────────────────────────────────────────────────────────────────
+// Tworzenie dokumentu faktury + upload PDF do Storage
+// ───────────────────────────────────────────────────────────────────────────────
 async function createInvoiceForPayment(paymentId: string): Promise<string> {
   const payRef = db.collection("payments").doc(paymentId);
   const paySnap = await payRef.get();
   if (!paySnap.exists) throw new Error("Payment not found");
-
   const p = paySnap.data() as any;
 
-  // Jeśli już ma invoiceId – nic nie rób
   if (p.invoiceId) return p.invoiceId;
 
   const number = await getNextInvoiceNumber();
   const issueDate = new Date().toISOString().split("T")[0];
 
-  // Sprzedawca (stałe – podmień na dane Twojej szkoły)
   const seller = {
     name: "MusicAcademy Sp. z o.o.",
     address: "ul. Dźwiękowa 10, 00-001 Warszawa",
-    nip: "123-456-78-90"
+    nip: "123-456-78-90",
   };
 
-  // Nabywca
   const buyer = {
     name: p.parentName || "Rodzic",
     email: p.email || "",
     address: p.parentAddress || "",
   };
 
-  // Dokument faktury
   const invDoc = {
     number,
     issueDate,
     paidAt: issueDate,
     status: "paid",
     currency: p.currency || "PLN",
-    amountGross: (p.amount / 100), // p.amount w groszach
+    amountGross: p.amount / 100,
     description: p.description || "Opłata za zajęcia",
     parentId: p.userId,
     childId: p.childId || null,
@@ -171,24 +176,21 @@ async function createInvoiceForPayment(paymentId: string): Promise<string> {
       {
         name: p.description || "Zajęcia muzyczne",
         qty: 1,
-        price: (p.amount / 100),
-        total: (p.amount / 100),
-      }
+        price: p.amount / 100,
+        total: p.amount / 100,
+      },
     ],
     seller,
     buyer,
-    pdfPath: "", // uzupełnimy po uploadzie
-    pdfUrl: "",  // jeśli zrobisz publiczny plik
+    pdfPath: "",
+    pdfUrl: "",
   };
 
-  // Zapisz dokument faktury
   const invRef = await db.collection("invoices").add(invDoc);
   const invoiceId = invRef.id;
 
-  // Zbuduj PDF → Buffer
   const buffer = await buildInvoicePdfBuffer({ ...invDoc, id: invoiceId }, seller, buyer);
 
-  // Upload do Storage
   const pdfPath = `invoices/${invoiceId}.pdf`;
   const file = bucket.file(pdfPath);
   await file.save(buffer, {
@@ -197,180 +199,289 @@ async function createInvoiceForPayment(paymentId: string): Promise<string> {
     metadata: { cacheControl: "public, max-age=3600" },
   });
 
-  // (opcjonalnie) Upublicznij i daj link publiczny:
-  // await file.makePublic();
-  // const pdfUrl = `https://storage.googleapis.com/${bucket.name}/${pdfPath}`;
-
   await invRef.update({ pdfPath /*, pdfUrl*/ });
   await payRef.update({ invoiceId });
 
   return invoiceId;
 }
 
-// === /initiatePayment – bez zmian poza Twoimi logami ===
-// w CF /initiatePayment
-
-const cfg = (functions as any).config?.() || {};
-const TPAY_ID     = process.env.TPAY_ID     ?? cfg.tpay?.merchant_id;
-const TPAY_SECRET = process.env.TPAY_SECRET ?? cfg.tpay?.secret;
-const TPAY_ENV    = process.env.TPAY_ENV    ?? cfg.tpay?.env; // "sandbox" | "production"
-const GATEWAY = TPAY_ENV === "sandbox" ? "https://secure.sandbox.tpay.com" : "https://secure.tpay.com";
+// ───────────────────────────────────────────────────────────────────────────────
+// Tpay config + debug
+// ───────────────────────────────────────────────────────────────────────────────
+function resolveTpay() {
+  const id = (process.env.TPAY_ID || "").trim();
+  const secret = (process.env.TPAY_SECRET || "").trim();
+  const env = (process.env.TPAY_ENV || "production").toLowerCase();
+  const gateway = env === "sandbox" ? "https://secure.sandbox.tpay.com" : "https://secure.tpay.com";
+  if (!id || !secret) throw new Error("TPAY not configured");
+  return { id, secret, env, gateway };
+}
 
 app.get("/tpay/debug", (_req, res) => {
-  res.json({
-    projectId: PROJECT_ID || null,
-    env: TPAY_ENV,
-    idDefined: !!TPAY_ID,
-    gateway: GATEWAY,
-  });
+  try {
+    const { id, secret, env, gateway } = resolveTpay();
+    res.json({
+      idUsed: id,
+      env,
+      gateway,
+      secretLen: secret.length,
+      secretHexPrefix: Buffer.from(secret, "utf8").toString("hex").slice(0, 12) + "…",
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
 });
 
-if (!TPAY_ID || !TPAY_SECRET) {
-  throw new Error("Brak TPAY_ID lub TPAY_SECRET (sprawdź secrets w Firebase).");
-}
-//"https://secure.sandbox.tpay.com"
-
-
+// ───────────────────────────────────────────────────────────────────────────────
+// Create payment → zwrot danych do auto-POST na secure.tpay.com
+// (MD5 dla "create": id & kwota & crc & secret)
+// ───────────────────────────────────────────────────────────────────────────────
 app.post("/initiatePayment", async (req, res) => {
+  let id: string, secret: string, gateway: string;
   try {
-    const { amount, description, email, returnUrl, successUrl, failureUrl, meta = {} } = req.body;
+    ({ id, secret, gateway } = resolveTpay());
+  } catch (e: any) {
+    return res.status(500).json({ error: String(e?.message || e) });
+  }
 
-    // 1) Wygeneruj payment i użyj jego ID jako crc
+  try {
+    let { amount, description, email, returnUrl, successUrl, failureUrl, meta = {} } = req.body || {};
+
+    const amountNum = Number(amount);
+    if (!isFinite(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
     const payRef = await db.collection("payments").add({
       status: "initiated",
-      amount: Math.round(Number(amount) * 100),   // grosze do PDF/rozliczeń
+      amount: Math.round(amountNum * 100), // grosze
       description: description || "Opłata za zajęcia",
       email: String(email || ""),
       meta,
       createdAt: FieldValue.serverTimestamp(),
     });
-    const crc = payRef.id;                      // <-- TO id będzie wracać w tr_crc w webhooku
+    const crc = payRef.id;
 
-    // 2) Kwota z kropką i 2 miejscami
-    const amountText = Number(amount).toFixed(2);
+    const amountText = amountNum.toFixed(2); // "4.00"
+    const kwota = amountText;
 
-    // 3) md5 wg spec: id + amount + crc + security_code
-    const md5Input = `${TPAY_ID}${amountText}${crc}${TPAY_SECRET}`;
-    const md5sum = crypto.createHash("md5").update(md5Input, "utf8").digest("hex");
+    // NOWY wymóg Tpay (ampersandy)
+    const md5sum = crypto
+          .createHash("md5")
+          .update(`${id}&${amountText}&${crc}&${secret}`, "utf8")
+          .digest("hex");
 
-    // 4) adres powiadomień (webhook)
-    const resultUrl = `${PUBLIC_FN_URL}/tpay/webhook`;
+    // dopnij paymentId do URL-i zwrotnych
+    const append = (u: string, k: string, v: string) => {
+      try {
+        const url = new URL(u);
+        url.searchParams.set(k, v);
+        return url.toString();
+      } catch {
+        return u ? u + (u.includes("?") ? "&" : "?") + `${k}=${encodeURIComponent(v)}` : "";
+      }
+    };
+    const return_url = append(String(successUrl || returnUrl || ""), "paymentId", crc);
+    const error_url = append(String(failureUrl || returnUrl || ""), "paymentId", crc);
 
     const form: Record<string, string> = {
-      id: String(TPAY_ID),
+      id: String(id),
+      // dla świętego spokoju podaj oba klucze kwoty:
       amount: amountText,
-      kwota: amountText,                  // alias – nie zaszkodzi
+      kwota:  amountText,
       description: String(description || "Opłata za zajęcia"),
-      opis: String(description || "Opłata za zajęcia"),
+      opis:        String(description || "Opłata za zajęcia"),
       email: String(email || ""),
-      crc,                                // <-- nasze ID płatności
-      md5sum,
-      result_url: resultUrl,              // <-- POWIADOMIENIA Tpay -> Twój webhook
+      crc,
+      md5sum,  // 👈 MUSI BYĆ WARTOŚĆ Z WZORU Z '&'
+      result_url: `${PUBLIC_FN_URL}/tpay/webhook`,
       return_url: String(successUrl || returnUrl || ""),
-      error_url: String(failureUrl || returnUrl || ""),
-      // opcjonalnie:
+      error_url:  String(failureUrl || returnUrl || ""),
       lang: "pl",
+      // accept_tos: "1", // (opcjonalnie – nie zawsze wymagane)
     };
 
-    console.log("[TPAY] gateway:", GATEWAY);
-    console.log("[TPAY] form:", form);
-    console.log("[TPAY] md5Input(masked):", `${TPAY_ID}${amountText}${crc}***`);
-    console.log("[TPAY] md5sum:", md5sum);
+    console.log("[TPAY:init] gateway:", gateway);
+    console.log("[TPAY:init] crc:", crc, "kwota:", kwota);
+    console.log("[TPAY:init] md5(amp) first8:", md5sum.slice(0, 8));
 
-    res.json({ gatewayUrl: GATEWAY, form });
-  } catch (e:any) {
+    return res.json({ gatewayUrl: gateway, form, paymentId: crc });
+  } catch (e: any) {
     console.error("/initiatePayment error:", e);
-    res.status(400).send(String(e?.message || e));
+    return res.status(400).send(String(e?.message || e));
   }
 });
 
-
-// === Webhook Tpay ===
+// ───────────────────────────────────────────────────────────────────────────────
+// Webhook (MD5 bez ampersandów: id + tr_id + tr_amount + tr_crc + secret)
+// ───────────────────────────────────────────────────────────────────────────────
 app.post("/tpay/webhook", async (req, res) => {
+  let MID: string, SEC: string;
   try {
-    // UWAGA: Tpay wysyła application/x-www-form-urlencoded – masz bodyParser.urlencoded OK
-    const b = req.body || {};
-    const {
-      tr_status,     // "TRUE"
-      tr_id,         // identyfikator transakcji w Tpay
-      tr_amount,     // "400.00"
-      tr_crc,        // = nasze paymentId (ustawione w initiatePayment)
-      md5sum,        // podpis Tpay
-      id,            // id merchanta (powinno równać się TPAY_ID)
-    } = b;
+    ({ id: MID, secret: SEC } = resolveTpay());
+  } catch {
+    // Tpay wymaga 200 + "ERROR"
+    return res.status(200).send("ERROR");
+  }
 
-    // 1) weryfikacja podpisu
-    const expectedMd5 = crypto
-      .createHash("md5")
-      .update(`${TPAY_ID}${tr_id}${tr_amount}${tr_crc}${TPAY_SECRET}`, "utf8")
-      .digest("hex");
+  const b = req.body || {};
+  const { tr_status, tr_id, tr_amount, tr_crc, md5sum, id } = b;
 
-    if (md5sum !== expectedMd5) {
-      console.error("[TPAY:webhook] md5 mismatch", { md5sum, expectedMd5, tr_id, tr_amount, tr_crc });
-      return res.status(400).send("ERROR");
+  const expected = crypto
+    .createHash("md5")
+    .update(`${MID}${tr_id}${tr_amount}${tr_crc}${SEC}`, "utf8")
+    .digest("hex");
+
+  // Walidacje
+  if (String(id) !== String(MID)) {
+    console.error("[TPAY:webhook] merchant mismatch", { got: id, want: MID });
+    return res.status(200).send("ERROR");
+  }
+  if (md5sum !== expected) {
+    console.error("[TPAY:webhook] md5 mismatch", {
+      got8: String(md5sum).slice(0, 8),
+      exp8: expected.slice(0, 8),
+      tr_id,
+      tr_amount,
+      tr_crc,
+    });
+    return res.status(200).send("ERROR");
+  }
+
+  // ACK natychmiast
+  res.status(200).send("TRUE");
+
+  // Obróbka w tle
+  process.nextTick(async () => {
+    try {
+      if (tr_status === "TRUE") {
+        const payRef = db.collection("payments").doc(String(tr_crc));
+        await payRef.set(
+          {
+            status: "paid",
+            tpayId: tr_id,
+            tpayAmount: tr_amount,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        const snap = await payRef.get();
+        if (snap.exists && snap.data()?.amount) {
+          await createInvoiceForPayment(String(tr_crc));
+        } else {
+          console.warn("[TPAY:webhook] payments/<crc> missing or incomplete", tr_crc);
+        }
+      }
+    } catch (e) {
+      console.error("[TPAY:webhook] post-ack error:", e);
     }
-    if (String(id) !== String(TPAY_ID)) {
-      console.error("[TPAY:webhook] merchant id mismatch", { id, TPAY_ID });
-      return res.status(400).send("ERROR");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Pomocniczy checker sygnatur (stara vs nowa)
+// ───────────────────────────────────────────────────────────────────────────────
+app.post("/tpay/check", (req, res) => {
+  const { id, secret } = resolveTpay();
+  const { amount, crc } = req.body || {};
+  const amountText = Number(amount).toFixed(2);
+
+  const concatSignature = crypto
+    .createHash("md5")
+    .update(`${id}${amountText}${crc}${secret}`, "utf8")
+    .digest("hex");
+
+  const ampSignature = crypto
+    .createHash("md5")
+    .update(`${id}&${amountText}&${crc}&${secret}`, "utf8")
+    .digest("hex");
+
+  res.json({
+    idUsed: id,
+    amountText,
+    crc,
+    secretLen: secret.length,
+    secretHexPrefix: Buffer.from(secret, "utf8").toString("hex").slice(0, 16) + "…",
+    concatSignature, // (do weryfikacji webhooka)
+    ampSignature, // (do create na secure.tpay.com)
+    note: "Używaj ampSignature dla tworzenia transakcji; concatSignature dla weryfikacji webhooka.",
+  });
+});
+
+// --- ZWRACA STATUS PŁATNOŚCI PO paymentId (czyli CRC) + ew. invoiceId
+app.get("/payments/:paymentId", async (req, res) => {
+  try {
+    const id = String(req.params.paymentId);
+    const snap = await db.collection("payments").doc(id).get();
+    if (!snap.exists) return res.status(404).json({ error: "payment not found" });
+    const p = snap.data() as any;
+
+    res.json({
+      id,
+      status: p.status || "initiated",
+      tpayId: p.tpayId || null,
+      tpayAmount: p.tpayAmount || null, // zwykle string "4.00"
+      invoiceId: p.invoiceId || null,
+      createdAt: p.createdAt || null,
+      updatedAt: p.updatedAt || null,
+      description: p.description || null,
+      email: p.email || null,
+    });
+  } catch (e:any) {
+    console.error("GET /payments/:id", e);
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
+
+// --- ZWRACA SZCZEGÓŁY FAKTURY + tymczasowy podpisany URL do PDF
+app.get("/invoices/:invoiceId", async (req, res) => {
+  try {
+    const id = String(req.params.invoiceId);
+    const snap = await db.collection("invoices").doc(id).get();
+    if (!snap.exists) return res.status(404).json({ error: "invoice not found" });
+
+    const inv = snap.data() as any;
+    let pdfUrl = inv.pdfUrl || "";
+
+    if (!pdfUrl && inv.pdfPath) {
+      // wygeneruj 10-min signed URL do niepublicznego pliku
+      const [signed] = await bucket
+        .file(inv.pdfPath)
+        .getSignedUrl({
+          action: "read",
+          expires: Date.now() + 10 * 60 * 1000,
+        });
+      pdfUrl = signed;
     }
 
-    // 2) zaakceptowana płatność?
-    if (tr_status === "TRUE") {
-      const payRef = db.collection("payments").doc(String(tr_crc));
-      await payRef.set({
-        status: "paid",
-        tpayId: tr_id,
-        tpayAmount: tr_amount,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-
-      // 3) wystaw fakturę (jeśli jej jeszcze nie ma)
-      await createInvoiceForPayment(String(tr_crc));
-    }
-
-    // Tpay wymaga "TRUE" w body gdy przyjęto webhook
-    return res.status(200).send("TRUE");
-  } catch (e) {
-    console.error(e);
-    return res.status(500).send("ERROR");
+    res.json({
+      id,
+      number: inv.number,
+      status: inv.status,
+      issueDate: inv.issueDate,
+      paidAt: inv.paidAt || null,
+      amountGross: inv.amountGross,
+      currency: inv.currency || "PLN",
+      description: inv.description || "",
+      paymentId: inv.paymentId || null,
+      classId: inv.classId || null,
+      childId: inv.childId || null,
+      seller: inv.seller || null,
+      buyer: inv.buyer || null,
+      pdfUrl: pdfUrl || null,
+    });
+  } catch (e:any) {
+    console.error("GET /invoices/:id", e);
+    res.status(500).json({ error: String(e?.message || e) });
   }
 });
 
 
-// === Pobranie PDF faktury (stream) ===
-app.get("/invoices/:id/pdf", async (req, res) => {
-  try {
-    const invoiceId = req.params.id;
-    const invRef = db.collection("invoices").doc(invoiceId);
-    const invSnap = await invRef.get();
-    if (!invSnap.exists) return res.status(404).send("Invoice not found");
-
-    const inv = invSnap.data() as any;
-
-    let pdfPath = inv.pdfPath;
-    if (!pdfPath) {
-      // nie ma PDF-a? – wygeneruj teraz
-      const buffer = await buildInvoicePdfBuffer(inv, inv.seller, inv.buyer);
-      pdfPath = `invoices/${invoiceId}.pdf`;
-      const file = bucket.file(pdfPath);
-      await file.save(buffer, { contentType: "application/pdf", resumable: false });
-      await invRef.update({ pdfPath });
-    }
-
-    const file = bucket.file(pdfPath);
-    res.setHeader("Content-Type", "application/pdf");
-    file.createReadStream().on("error", (e) => {
-      console.error(e);
-      res.status(500).end("ERROR");
-    }).pipe(res);
-  } catch (e) {
-    console.error(e);
-    res.status(500).send("ERROR");
-  }
-});
-
+// ───────────────────────────────────────────────────────────────────────────────
+// Export funkcji HTTPS
+// ───────────────────────────────────────────────────────────────────────────────
 export const api = functions
   .region("us-central1")
   .runWith({ secrets: ["TPAY_ID", "TPAY_SECRET", "TPAY_ENV"] })
   .https.onRequest(app);
-  

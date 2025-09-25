@@ -61,7 +61,7 @@ export default function Navbar() {
                 Perfect<span className="text-white/70">Tune</span>
               </div>
               <div className="text-[10px] uppercase tracking-[0.18em] text-white/50">
-                Gabriela Wiśniewskiego
+                Gabriel Wiśniewski
               </div>
             </div>
           </Link>

@@ -43,6 +43,13 @@ const RegisterPage = () => {
   const { signupWithEmail } = useAuth();
   const [, navigate] = useLocation();
 
+  const DOT_SVG = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+     <circle cx="1" cy="1" r="1" fill="#ffffff" opacity="0.06"/>
+    </svg>`
+  );
+  const DOT_DATA_URL = `data:image/svg+xml,${DOT_SVG}`;
+
   const addChild = () => {
     setChildren([...children, { id: Date.now().toString(), name: "", surname: "", age: "" }]);
   };
@@ -96,8 +103,8 @@ const RegisterPage = () => {
     // Validate final step
     if (!email || !password || !confirmPassword) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: "Brakuje informacji",
+        description: "Proszę wypełnić wszystkie wymagane pola",
         variant: "destructive",
       });
       return;
@@ -105,8 +112,8 @@ const RegisterPage = () => {
     
     if (password !== confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match",
+        title: "Hasło nie pasuje",
+        description: "Proszę upewnić się, że hasła są takie same",
         variant: "destructive",
       });
       return;
@@ -114,8 +121,8 @@ const RegisterPage = () => {
     
     if (!acceptTerms) {
       toast({
-        title: "Terms Not Accepted",
-        description: "Please accept the terms and conditions",
+        title: "Akceptacja warunków jest wymagana",
+        description: "Proszę zaakceptować warunki korzystania i politykę prywatności",
         variant: "destructive",
       });
       return;
@@ -158,16 +165,16 @@ const RegisterPage = () => {
         });
         
         toast({
-          title: "Registration Successful",
-          description: "Your account has been created",
+          title: "Konto utworzoneo pomyślnie",
+          description: "Witamy w PerfectTune!",
         });
         
         navigate("/dashboard/parent");
       }
     } catch (error: any) {
       toast({
-        title: "Registration Failed",
-        description: error.message || "There was an error creating your account",
+        title: "Rejestracja nie powiodła się",
+        description: error.message || "Coś poszło nie tak. Spróbuj ponownie.",
         variant: "destructive",
       });
     } finally {
@@ -176,37 +183,50 @@ const RegisterPage = () => {
   };
 
   return (
-    <>
+    <><div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `
+              radial-gradient(1100px 520px at 12% -10%, rgba(88,101,242,.22), transparent 55%),
+              radial-gradient(900px 480px at 90% 0%, rgba(186,230,253,.18), transparent 60%),
+              radial-gradient(1000px 800px at 50% 115%, rgba(56,189,248,.10), transparent 55%),
+              url("${DOT_DATA_URL}")
+            `,
+            backgroundRepeat: "no-repeat, no-repeat, no-repeat, repeat",
+            backgroundSize: "auto, auto, auto, 32px 32px",
+          }}
+        />
       <Helmet>
         <title>Register - MusicAcademy</title>
         <meta name="description" content="Create a parent account at MusicAcademy to manage your children's music education." />
       </Helmet>
       
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-black/80 relative z-10">
+         
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <Card className="rounded-xl shadow-lg overflow-hidden">
               <CardContent className="p-0">
                 <div className="bg-primary p-6 text-white">
-                  <h2 className="font-accent text-2xl md:text-3xl font-bold">Parent Registration</h2>
-                  <p className="opacity-90 mt-2">Create an account to manage your children's music education</p>
+                  <h2 className="font-accent text-2xl md:text-3xl font-bold">Zakładanie konta PerfectTune</h2>
+                  <p className="opacity-90 mt-2">Załóż konto, aby zarządzać edukacją muzyczną swoich dzieci</p>
                   
                   {/* Registration Steps */}
                   <div className="mt-8">
                     <div className="flex items-center justify-between relative">
                       <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep === 1 ? 'bg-white text-primary' : 'bg-white bg-opacity-80 text-primary'}`}>1</div>
-                        <span className="text-xs mt-1">Personal Info</span>
+                        <span className="text-xs mt-1">Dane osobowe</span>
                       </div>
                       <div className={`flex-1 h-1 mx-2 ${currentStep >= 2 ? 'bg-white' : 'bg-white bg-opacity-30'}`}></div>
                       <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep === 2 ? 'bg-white text-primary' : currentStep > 2 ? 'bg-white bg-opacity-80 text-primary' : 'bg-white bg-opacity-30 text-primary-dark'}`}>2</div>
-                        <span className="text-xs mt-1">Children</span>
+                        <span className="text-xs mt-1">Dziecko</span>
                       </div>
                       <div className={`flex-1 h-1 mx-2 ${currentStep >= 3 ? 'bg-white' : 'bg-white bg-opacity-30'}`}></div>
                       <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep === 3 ? 'bg-white text-primary' : 'bg-white bg-opacity-30 text-primary-dark'}`}>3</div>
-                        <span className="text-xs mt-1">Account</span>
+                        <span className="text-xs mt-1">Konto</span>
                       </div>
                     </div>
                   </div>
@@ -217,25 +237,25 @@ const RegisterPage = () => {
                   {/* Step 1: Parent Information */}
                   {currentStep === 1 && (
                     <div id="step-1">
-                      <h3 className="font-bold text-lg mb-4">Parent Information</h3>
+                      <h3 className="font-bold text-lg mb-4">Dane rodzica</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                          <Label htmlFor="firstName">First Name</Label>
+                          <Label htmlFor="firstName">Imię</Label>
                           <Input 
                             id="firstName" 
                             type="text" 
-                            placeholder="Your first name" 
+                            placeholder="Twoje imię" 
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
                           />
                         </div>
                         <div>
-                          <Label htmlFor="lastName">Last Name</Label>
+                          <Label htmlFor="lastName">Nazwisko</Label>
                           <Input 
                             id="lastName" 
                             type="text" 
-                            placeholder="Your last name" 
+                            placeholder="Twoje nazwisko" 
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                           />
@@ -243,22 +263,22 @@ const RegisterPage = () => {
                       </div>
                       
                       <div className="mb-4">
-                        <Label htmlFor="phoneNumber">Phone Number</Label>
+                        <Label htmlFor="phoneNumber">Numer telefonu</Label>
                         <Input 
                           id="phoneNumber" 
                           type="tel" 
-                          placeholder="(123) 456-7890" 
+                          placeholder="+48 123 456 789" 
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
                         />
                       </div>
                       
                       <div className="mb-4">
-                        <Label htmlFor="address">Street Address</Label>
+                        <Label htmlFor="address">Adres</Label>
                         <Input 
                           id="address" 
                           type="text" 
-                          placeholder="123 Main St" 
+                          placeholder="Ulica 123" 
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                         />
@@ -266,41 +286,32 @@ const RegisterPage = () => {
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                          <Label htmlFor="city">City</Label>
+                          <Label htmlFor="city">Miasto</Label>
                           <Input 
                             id="city" 
                             type="text" 
-                            placeholder="City" 
+                            placeholder="Miasto" 
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
                           />
                         </div>
                         <div>
-                          <Label htmlFor="postalCode">Postal Code</Label>
+                          <Label htmlFor="postalCode">Kod pocztowy</Label>
                           <Input 
                             id="postalCode" 
                             type="text" 
-                            placeholder="12345" 
+                            placeholder="06-400" 
                             value={postalCode}
                             onChange={(e) => setPostalCode(e.target.value)}
                           />
                         </div>
+                        
                         <div>
-                          <Label htmlFor="apartmentNumber">Apt/Suite #</Label>
-                          <Input 
-                            id="apartmentNumber" 
-                            type="text" 
-                            placeholder="Apt #" 
-                            value={apartmentNumber}
-                            onChange={(e) => setApartmentNumber(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="houseNumber">House #</Label>
+                          <Label htmlFor="houseNumber">Numer domu</Label>
                           <Input 
                             id="houseNumber" 
                             type="text" 
-                            placeholder="House #" 
+                            placeholder="12A/4 lub 2" 
                             value={houseNumber}
                             onChange={(e) => setHouseNumber(e.target.value)}
                           />
@@ -313,7 +324,7 @@ const RegisterPage = () => {
                   {currentStep === 2 && (
                     <div id="step-2">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-lg">Children Information</h3>
+                        <h3 className="font-bold text-lg">Informacje dziecka</h3>
                         <Button 
                           type="button" 
                           variant="outline" 
@@ -322,14 +333,14 @@ const RegisterPage = () => {
                           className="flex items-center gap-1"
                         >
                           <FaPlus size={12} />
-                          Add Child
+                          Dodaj dziecko
                         </Button>
                       </div>
                       
                       {children.map((child, index) => (
                         <div key={child.id} className="mb-6 p-4 border border-neutral-200 rounded-lg">
                           <div className="flex justify-between items-center mb-3">
-                            <h4 className="font-medium">Child {index + 1}</h4>
+                            <h4 className="font-medium">Dziecko {index + 1}</h4>
                             {children.length > 1 && (
                               <Button 
                                 type="button" 
@@ -344,33 +355,33 @@ const RegisterPage = () => {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                              <Label htmlFor={`child-name-${child.id}`}>First Name</Label>
+                              <Label htmlFor={`child-name-${child.id}`}>Imię</Label>
                               <Input 
                                 id={`child-name-${child.id}`} 
                                 type="text" 
-                                placeholder="Child's first name" 
+                                placeholder="Imię dziecka" 
                                 value={child.name}
                                 onChange={(e) => updateChild(child.id, 'name', e.target.value)}
                               />
                             </div>
                             <div>
-                              <Label htmlFor={`child-surname-${child.id}`}>Last Name</Label>
+                              <Label htmlFor={`child-surname-${child.id}`}>Nazwisko</Label>
                               <Input 
                                 id={`child-surname-${child.id}`} 
                                 type="text" 
-                                placeholder="Child's last name" 
+                                placeholder="Nazwisko dziecka" 
                                 value={child.surname}
                                 onChange={(e) => updateChild(child.id, 'surname', e.target.value)}
                               />
                             </div>
                             <div>
-                              <Label htmlFor={`child-age-${child.id}`}>Age</Label>
+                              <Label htmlFor={`child-age-${child.id}`}>Wiek</Label>
                               <Input 
                                 id={`child-age-${child.id}`} 
                                 type="number" 
                                 min="1"
                                 max="18"
-                                placeholder="Age" 
+                                placeholder="Wiek" 
                                 value={child.age}
                                 onChange={(e) => updateChild(child.id, 'age', e.target.value)}
                               />
@@ -384,21 +395,21 @@ const RegisterPage = () => {
                   {/* Step 3: Account Information */}
                   {currentStep === 3 && (
                     <div id="step-3">
-                      <h3 className="font-bold text-lg mb-4">Account Information</h3>
+                      <h3 className="font-bold text-lg mb-4">Informacje o koncie</h3>
                       
                       <div className="mb-4">
-                        <Label htmlFor="email">Email Address</Label>
+                        <Label htmlFor="email">Adres email</Label>
                         <Input 
                           id="email" 
                           type="email" 
-                          placeholder="your@email.com" 
+                          placeholder="Adres email" 
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
                       
                       <div className="mb-4">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">Hasło</Label>
                         <Input 
                           id="password" 
                           type="password" 
@@ -409,7 +420,7 @@ const RegisterPage = () => {
                       </div>
                       
                       <div className="mb-6">
-                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Label htmlFor="confirmPassword">Potwierdź hasło</Label>
                         <Input 
                           id="confirmPassword" 
                           type="password" 
@@ -427,7 +438,7 @@ const RegisterPage = () => {
                             onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
                           />
                           <Label htmlFor="acceptTerms" className="text-sm text-neutral-700">
-                            I accept the <a href="/terms" className="text-primary hover:underline">Terms & Conditions</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
+                            Akceptuje <a href="/terms" className="text-primary hover:underline">Warunki korzystania</a> i <a href="/privacy" className="text-primary hover:underline">Polityka prywatności</a>
                           </Label>
                         </div>
                       </div>
@@ -444,7 +455,7 @@ const RegisterPage = () => {
                         className="flex items-center gap-1"
                       >
                         <FaArrowLeft size={14} />
-                        Previous
+                        Poprzednia
                       </Button>
                     )}
                     
@@ -455,7 +466,7 @@ const RegisterPage = () => {
                           className="bg-primary hover:bg-primary-dark text-white"
                           onClick={handleNext}
                         >
-                          Next
+                          Następna
                           <FaArrowRight size={14} className="ml-2" />
                         </Button>
                       ) : (
@@ -470,7 +481,7 @@ const RegisterPage = () => {
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                               </svg>
-                              Creating Account...
+                             Tworzę konto...
                             </div>
                           ) : "Create Account"}
                         </Button>
@@ -483,6 +494,14 @@ const RegisterPage = () => {
           </div>
         </div>
       </section>
+      <div
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"140\" height=\"140\" viewBox=\"0 0 100 100\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.9\" numOctaves=\"2\" stitchTiles=\"stitch\"/></filter><rect width=\"100%\" height=\"100%\" filter=\"url(%23n)\" opacity=\"0.35\"/></svg>')",
+            backgroundRepeat: "repeat",
+          }}
+        />
     </>
   );
 };

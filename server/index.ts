@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(express.json());
@@ -62,6 +64,20 @@ app.use((req, res, next) => {
   const port = process.env.PORT || 5173;
   const host = process.env.NODE_ENV === 'production' ? 'localhost' : '0.0.0.0';
   
+  // po app.use('/api', ...), po app.use(express.static(...))
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  // Serwuj statyki (dostosuj ścieżkę)
+  app.use(express.static(path.join(__dirname, "public")));
+
+  // ⚠️ catch-all dla SPA – wszystko poza /api/* leci do index.html
+  app.get(/^(?!\/api\/).+/, (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  });
+
+
   server.listen(port, () => {
     log(`serving on port ${port}`);
   });

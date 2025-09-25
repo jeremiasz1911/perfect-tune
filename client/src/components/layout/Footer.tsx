@@ -16,22 +16,14 @@ export default function Footer() {
               </div>
               <div>
                 <div className="font-extrabold">Perfect<span className="text-white/70">Tune</span></div>
-                <div className="text-[11px] text-white/50">Gabriela Wiśniewskiego</div>
+                <div className="text-[11px] text-white/50">Gabriel Wiśniewski</div>
               </div>
             </div>
             <p className="mt-4 text-white/75">
               Jakość i pasja w każdym dźwięku. Zajęcia i warsztaty, które rozwijają kreatywność dzieci i młodzieży.
             </p>
             <div className="mt-4 flex items-center gap-3">
-              <a href="#" className="p-2 rounded-lg border border-white/10 hover:bg-white/10 transition">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="p-2 rounded-lg border border-white/10 hover:bg-white/10 transition">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="p-2 rounded-lg border border-white/10 hover:bg-white/10 transition">
-                <Youtube className="h-5 w-5" />
-              </a>
+            
             </div>
           </div>
 
@@ -41,8 +33,6 @@ export default function Footer() {
             <ul className="space-y-2 text-white/80">
               <li><Link href="/" className="hover:text-white">Start</Link></li>
               <li><Link href="/about" className="hover:text-white">O mnie</Link></li>
-              <li><Link href="/workshops" className="hover:text-white">Warsztaty</Link></li>
-              <li><Link href="/gallery" className="hover:text-white">Galeria</Link></li>
               <li><Link href="/classes" className="hover:text-white">Zajęcia</Link></li>
               <li><Link href="/contact" className="hover:text-white">Kontakt</Link></li>
             </ul>
@@ -53,8 +43,7 @@ export default function Footer() {
             <h4 className="font-semibold mb-4">Oferta</h4>
             <ul className="space-y-2 text-white/80">
               <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Produkcja muzyczna</li>
-              <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Instrumenty: gitara, pianino</li>
-              <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Wokal</li>
+              <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Instrumenty: ukulele</li>
               <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Zajęcia grupowe</li>
               <li className="flex items-center gap-2"><Music4 className="h-4 w-4" /> Warsztaty tematyczne</li>
             </ul>
@@ -62,40 +51,22 @@ export default function Footer() {
 
           {/* newsletter */}
           <div>
-            <h4 className="font-semibold mb-4">Biuletyn</h4>
+            <h4 className="font-semibold mb-4">Panel</h4>
             <p className="text-white/75 mb-3">
-              Zapisz się, aby dostawać info o nowych warsztatach i promocjach.
+              Stwórz konto i zarządzaj swoimi zajęciami oraz płatnościami.
+              Zapisy na zajęcia i warsztaty dostępne po zalogowaniu.
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                // TODO: obsługa subskrypcji
-              }}
-              className="flex items-stretch rounded-xl overflow-hidden border border-white/10"
+            <button
+              onClick={() => { window.location.href = "/login"; }}
+              className="inline-block bg-white text-[#0B0F19] hover:bg-white/90 px-4 py-2 rounded-lg font-semibold transition text-xs"
             >
-              <div className="flex items-center px-3 bg-white/5">
-                <Mail className="h-4 w-4 text-white/70" />
-              </div>
-              <input
-                type="email"
-                placeholder="Twój e-mail"
-                className="flex-1 bg-transparent px-3 py-2 outline-none placeholder:text-white/50"
-                required
-              />
-              <button
-                type="submit"
-                className="bg-white text-[#0B0F19] hover:bg-white/90 px-3"
-                aria-label="Zapisz do newslettera"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
-            <p className="mt-2 text-[11px] text-white/50">
-              Zapis oznacza akceptację polityki prywatności. Możesz zrezygnować w każdej chwili.
-            </p>
+              Zaloguj się / Zarejestruj
+            </button>
+            <div className="mt-6">
+       
           </div>
         </div>
-
+        </div>
         <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
           <div>© {new Date().getFullYear()} PerfectTune. Wszystkie prawa zastrzeżone.</div>
           <div className="flex items-center gap-6">
@@ -103,6 +74,7 @@ export default function Footer() {
             <Link href="/privacy" className="hover:text-white">Polityka prywatności</Link>
           </div>
         </div>
+      
       </div>
     </footer>
   );

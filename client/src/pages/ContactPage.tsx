@@ -207,7 +207,7 @@ const ContactPage = () => {
               >
                 <h3 className="text-xl font-bold mb-4">Dane kontaktowe</h3>
                 <div className="space-y-5 text-white/85">
-                  <div className="flex items-start gap-3">
+                  {/* <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-cyan-500/20 p-3">
                       <FaMapMarkerAlt className="text-cyan-300" />
                     </div>
@@ -215,7 +215,7 @@ const ContactPage = () => {
                       <div className="font-semibold">Nasza lokalizacja</div>
                       <p>ul. Muzyczna 12, 06-400 Ciechanów<br/>Polska</p>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-cyan-500/20 p-3">
@@ -223,7 +223,7 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <div className="font-semibold">Telefon</div>
-                      <p>(+48) 23 123 45 67</p>
+                      <p>+48 518 454 593</p>
                     </div>
                   </div>
 
@@ -233,11 +233,11 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <div className="font-semibold">Email</div>
-                      <p>kontakt@perfecttune.pl</p>
+                      <p>gabriel.wisnia@gmail.com</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  {/* <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-cyan-500/20 p-3">
                       <FaClock className="text-cyan-300" />
                     </div>
@@ -245,10 +245,10 @@ const ContactPage = () => {
                       <div className="font-semibold">Godziny</div>
                       <p>Pn–Pt: 9:00–20:00 • Sb: 10:00–16:00 • Nd: zamknięte</p>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
-                <div className="mt-6">
+                {/* <div className="mt-6">
                   <div className="font-semibold mb-3">Obserwuj nas</div>
                   <div className="flex gap-3">
                     {[FaFacebookF, FaInstagram, FaYoutube, FaTiktok].map((Icon, i) => (
@@ -262,7 +262,7 @@ const ContactPage = () => {
                       </a>
                     ))}
                   </div>
-                </div>
+                </div> */}
               </motion.div>
 
               {/* Mapa */}
@@ -271,15 +271,14 @@ const ContactPage = () => {
                 {...scaleIn(0.1)}
               >
                 <div className="aspect-video">
-                  <iframe
-                    title="PerfectTune — lokalizacja"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2538.138276783991!2d20.617!3d52.881!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x471e131456789abc%3A0x1234567890abcdef!2sCiechan%C3%B3w!5e0!3m2!1spl!2spl!4v1681400000000"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    allowFullScreen
-                  />
+                 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2426.1662852671434!2d20.597457876725123!3d52.88796117215993!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x411151f89c50013b%3A0x475837039fc38844!2sSzko%C5%82a%20Podstawowa%20nr%205%20im.%20W%C5%82adys%C5%82awa%20Broniewskiego%20w%20Ciechanowie!5e1!3m2!1sen!2spl!4v1758821799466!5m2!1sen!2spl" 
+                  width="100%" 
+                  height="100%" 
+                  allowfullscreen="" 
+                  loading="lazy" 
+                  referrerpolicy="no-referrer-when-downgrade">
+                    
+                 </iframe>
                 </div>
               </motion.div>
             </motion.aside>
@@ -288,7 +287,7 @@ const ContactPage = () => {
       </section>
 
       {/* CTA końcowe */}
-      <section className="relative">
+      {/* <section className="relative">
         <div className="container mx-auto px-4 pb-20">
           <motion.div
             className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.04] backdrop-blur p-8 md:p-10 flex flex-col md:flex-row items-center md:items-end justify-between gap-6"
@@ -305,7 +304,7 @@ const ContactPage = () => {
             </Button>
           </motion.div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };

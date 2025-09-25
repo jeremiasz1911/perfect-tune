@@ -138,7 +138,7 @@ const SLIDES = [
     title: "ZAJĘCIA UMUZYCZNIAJĄCE - ZESPÓŁ UKULELE",
     text: "Szkolne zajęcia dla twojego dziecka – nauka gry na ukulele, rytmika i dobra zabawa w grupie",
     cta: { label: "Zapisz się", href: "/register" },
-    img: "https://images.unsplash.com/photo-1700419420072-8583b28f2036?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    img: "https://images.unsplash.com/photo-1666369406045-652b066f73fa?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHVrdWxlbGV8ZW58MHx8MHx8fDA%3D",
   }
 ];
 
@@ -327,7 +327,7 @@ const HomePage = () => {
   return (
     <div className="relative min-h-screen bg-[#0B0F19] text-white">
       <Helmet>
-        <title>PerfectTune — zajęcia i warsztaty | Gabriela Wiśniewskiego</title>
+        <title>PerfectTune — zajęcia i warsztaty | Gabriel Wiśniewski</title>
         <meta
           name="description"
           content="PerfectTune — działalność jednoosobowa Gabriela Wiśniewskiego. Zajęcia dla dzieci i młodzieży, produkcja muzyczna, warsztaty. Zapisz się już dziś!"
@@ -381,7 +381,7 @@ const HomePage = () => {
                         <div className="inline-flex font-black items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 mb-4">
                           <Sparkles className="w-4 h-4 text-white" />
                           <span className="text-xs tracking-wide text-white/80">
-                            PerfectTune — Gabriela Wiśniewskiego
+                            PerfectTune — Gabriel Wiśniewski
                           </span>
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -524,36 +524,11 @@ const HomePage = () => {
       </section> */}
 
       {/* ===== Najbliższe zajęcia (zliczone z schedule) ===== */}
-      {upcoming.length > 0 && (
-        <section className="relative">
-          <div className="container mx-auto px-4 py-10 md:py-14">
-            <motion.div className="flex items-end justify-between gap-4 mb-6" {...fadeUp(0.05)}>
-              <div>
-                <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                  Najbliższe zajęcia
-                </h2>
-                <p className="text-white/70 mt-2">
-                  Zobacz, które zajęcia startują już wkrótce. Idealne dla dzieci i młodzieży.
-                </p>
-              </div>
-              <Link href="/classes">
-                <Button className="border-white/15 text-white hover:bg-white/10">
-                  Pełna oferta
-                </Button>
-              </Link>
-            </motion.div>
-
-            <motion.div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" {...fade(0.12)}>
-              {upcoming.slice(0, 3).map(({ lesson, nextAt }) => (
-                <UpcomingCard key={lesson.id} lesson={lesson} nextAt={nextAt} />
-              ))}
-            </motion.div>
-          </div>
-        </section>
-      )}
+    
+  
 
       {/* ===== Zajęcia (3 karty) ===== */}
-      <section className="relative">
+      {/* <section className="relative">
         <div className="container mx-auto px-4 py-10 md:py-14">
           <motion.div className="flex items-end justify-between gap-4 mb-6" {...fadeUp(0.05)}>
             <div>
@@ -644,7 +619,7 @@ const HomePage = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ===== O mnie / treść (Twoje opisy) ===== */}
       <section className="relative">

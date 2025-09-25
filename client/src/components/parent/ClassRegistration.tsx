@@ -125,9 +125,14 @@ async function payByInvoiceCF(invoiceId: string, childId: string) {
   const inv: any = invSnap.data();
 
   // 2) Dane do payloadu
-  const amount = Number(inv.amount);
-  if (!amount || amount <= 0) throw new Error("Invalid invoice amount");
-
+  const raw = inv.amountGross ?? inv.amount ?? inv.total ?? 0;
+  const amount =
+  typeof raw === "number"
+    ? (Number.isInteger(raw) && raw > 100 ? raw / 100 : raw)
+    : parseFloat(String(raw));
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Invalid invoice amount");
+  }
   const description = String(inv.description || "Opłata za zajęcia");
   const parentId = auth.currentUser?.uid || "";
 
@@ -196,7 +201,14 @@ async function payInvoiceViaCF(invoiceId: string) {
     const inv: any = invSnap.data();
 
     // 2) Walidacja i przygotowanie danych
-    const amount = Number(inv.amount);
+    const raw = inv.amountGross ?? inv.amount ?? inv.total ?? 0;
+    const amount =
+    typeof raw === "number"
+      ? (Number.isInteger(raw) && raw > 100 ? raw / 100 : raw)
+      : parseFloat(String(raw));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Invalid invoice amount");
+    }
     const currency = String(inv.currency || "PLN");
     const description = String(inv.description || "Opłata za zajęcia");
     const parentId = auth.currentUser?.uid || "";
